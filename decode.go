@@ -5,22 +5,6 @@ import (
 	"io"
 )
 
-// Unmarshaler is the interface implemented by types
-// that can unmarshal a Bencode description of themselves.
-type Unmarshaler interface {
-	UnmarshalBencode([]byte) error
-}
-
-// Unmarshal parses the bencoded data and stores the result
-// in the value pointed to by v.
-func Unmarshal(data []byte, v interface{}) error {
-	var d decoder
-	if err := d.Unmarshal(v); err != nil {
-		return err
-	}
-	return nil
-}
-
 // A Decoder reads and decodes Bencode values from an input stream.
 type Decoder struct {
 	r io.Reader

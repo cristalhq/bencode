@@ -5,21 +5,6 @@ import (
 	"io"
 )
 
-// Marshaler is the interface implemented by types that
-// can marshal themselves into valid Bencode.
-type Marshaler interface {
-	MarshalBencode() ([]byte, error)
-}
-
-// Marshal returns bencode encoding of v.
-func Marshal(v interface{}) ([]byte, error) {
-	var e encoder
-	if err := e.Marshal(v); err != nil {
-		return nil, err
-	}
-	return e.Bytes(), nil
-}
-
 // An Encoder writes Bencode values to an output stream.
 type Encoder struct {
 	w io.Writer

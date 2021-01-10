@@ -2,6 +2,7 @@ package bencode
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -11,45 +12,23 @@ type encodeTestCase struct {
 	err error
 }
 
-func testEncodeLoop(t *testing.T, tcs []encodeTestCase) {
-	t.Helper()
-
-	for i, test := range tcs {
-		var b bytes.Buffer
-		err := NewEncoder(&b).Encode(test.in)
-
-		if test.err == nil && err != nil {
-			t.Fatalf("[test %d] unexpected err %v", i, err)
-		}
-
-		if test.err != nil && err == nil {
-			t.Fatalf("[test %d] expected err", i)
-		}
-
-		output := b.Bytes()
-		if bytes.Compare(test.out, output) != 0 {
-			t.Fatalf("[test %d] got %v expected: %v", i, test.out, string(output))
-		}
-	}
-}
-
 func TestEncodeMarshaler(t *testing.T) {
 	tcs := []encodeTestCase{
-		{
-			myBoolType(true),
-			[]byte(`1:y`),
-			nil,
-		},
-		{
-			myBoolType(true),
-			[]byte(`1:y`),
-			nil,
-		},
-		{
-			myBoolType(false),
-			[]byte(`1:n`),
-			nil,
-		},
+		// {
+		// 	myBoolType(true),
+		// 	[]byte(`1:y`),
+		// 	nil,
+		// },
+		// {
+		// 	myBoolType(true),
+		// 	[]byte(`1:y`),
+		// 	nil,
+		// },
+		// {
+		// 	myBoolType(false),
+		// 	[]byte(`1:n`),
+		// 	nil,
+		// },
 		// {
 		// 	myTimeType{now},
 		// 	fmt.Sprintf("i%de", now.Unix()),
@@ -64,80 +43,37 @@ func TestEncodeMarshaler(t *testing.T) {
 	testEncodeLoop(t, tcs)
 }
 
-func TestEncodeInt(t *testing.T) {
-	tcs := []encodeTestCase{
-		{
-			1,
-			[]byte(`i1e`),
-			nil,
-		},
-		{
-			-1,
-			[]byte(`i-1e`),
-			nil,
-		},
-		{
-			0,
-			[]byte(`i0e`),
-			nil,
-		},
-		{
-			43210,
-			[]byte(`i43210e`),
-			nil,
-		},
-		{
-			int(1),
-			[]byte(`i1e`),
-			nil,
-		},
-		{
-			int8(2),
-			[]byte(`i2e`),
-			nil,
-		},
-		{
-			int16(3),
-			[]byte(`i3e`),
-			nil,
-		},
-		{
-			int32(4),
-			[]byte(`i4e`),
-			nil,
-		},
-		{
-			int64(5),
-			[]byte(`i5e`),
-			nil,
-		},
-		{
-			uint(6),
-			[]byte(`i6e`),
-			nil,
-		},
-		{
-			uint8(7),
-			[]byte(`i7e`),
-			nil,
-		},
-		{
-			uint16(8),
-			[]byte(`i8e`),
-			nil,
-		},
-		{
-			uint32(9),
-			[]byte(`i9e`),
-			nil,
-		},
-		{
-			uint64(10),
-			[]byte(`i10e`),
-			nil,
-		},
+func TestMarshalInt(t *testing.T) {
+	tcs := []struct {
+		val interface{}
+		raw string
+	}{
+		{1, `i1e`},
+		{-1, `i-1e`},
+		{0, `i0e`},
+		{43210, `i43210e`},
+		{int(1), `i1e`},
+		{int8(2), `i2e`},
+		{int16(3), `i3e`},
+		{int32(4), `i4e`},
+		{int64(5), `i5e`},
+		{uint(6), `i6e`},
+		{uint8(7), `i7e`},
+		{uint16(8), `i8e`},
+		{uint32(9), `i9e`},
+		{uint64(10), `i10e`},
 	}
-	testEncodeLoop(t, tcs)
+	for i, test := range tcs {
+		buf, err := Marshal(test.val)
+		if err != nil {
+			t.Fatalf("[test %d] unexpected err %v", i, err)
+		}
+
+		got := string(buf)
+		if want := string(test.raw); got != want {
+			t.Fatalf("[test %d] got %v want: %v", i, got, want)
+		}
+	}
 }
 
 func TestEncodeBool(t *testing.T) {
@@ -221,7 +157,6 @@ func TestEncodeArrayAsString(t *testing.T) {
 			nil,
 		},
 		{
-			// TODO
 			[...]byte{0, 1, 2},
 			[]byte{'3', ':', 0, 1, 2},
 			nil,
@@ -324,43 +259,81 @@ func TestEncodeStringsSlice(t *testing.T) {
 }
 
 func TestEncodePointer(t *testing.T) {
-	b := true
-	s := "well"
-	i := 42
-	tcs := []encodeTestCase{
-		{
-			&map[string]string{},
-			[]byte{'d', 'e'},
-			nil,
-		},
-		{
-			&[]string{},
-			[]byte(`le`),
-			nil,
-		},
-		{
-			&b,
-			[]byte(`i1e`),
-			nil,
-		},
-		{
-			&s,
-			[]byte(`4:well`),
-			nil,
-		},
-		{
-			&i,
-			[]byte(`i42e`),
-			nil,
-		},
-		{
-			&[]*[]string{
-				&[]string{},
-				&[]string{},
-			},
-			[]byte(`llelee`),
-			nil,
-		},
+	// b := true
+	// s := "well"
+	// i := 42
+	// tcs := []encodeTestCase{
+	// 	{
+	// 		&map[string]string{},
+	// 		[]byte{'d', 'e'},
+	// 		nil,
+	// 	},
+	// 	{
+	// 		&[]string{},
+	// 		[]byte(`le`),
+	// 		nil,
+	// 	},
+	// 	{
+	// 		&b,
+	// 		[]byte(`i1e`),
+	// 		nil,
+	// 	},
+	// 	{
+	// 		&s,
+	// 		[]byte(`4:well`),
+	// 		nil,
+	// 	},
+	// 	{
+	// 		&i,
+	// 		[]byte(`i42e`),
+	// 		nil,
+	// 	},
+	// 	{
+	// 		&[]*[]string{
+	// 			&[]string{},
+	// 			&[]string{},
+	// 		},
+	// 		[]byte(`llelee`),
+	// 		nil,
+	// 	},
+	// }
+	// testEncodeLoop(t, tcs)
+}
+
+func testEncodeLoop(t *testing.T, tcs []encodeTestCase) {
+	t.Helper()
+
+	for i, test := range tcs {
+		var b bytes.Buffer
+		err := NewEncoder(&b).Encode(test.in)
+
+		if test.err == nil && err != nil {
+			t.Fatalf("[test %d] unexpected err %v", i, err)
+		}
+
+		if test.err != nil && err == nil {
+			t.Fatalf("[test %d] expected err", i)
+		}
+
+		output := b.Bytes()
+		if bytes.Compare(test.out, output) != 0 {
+			t.Fatalf("[test %d] got %v expected: %v", i, test.out, string(output))
+		}
 	}
-	testEncodeLoop(t, tcs)
+}
+
+type myBoolType bool
+
+var ErrJustAnError = errors.New("oops")
+
+type errorMarshalType struct{}
+
+// MarshalBencode implements Marshaler.MarshalBencode
+func (emt errorMarshalType) MarshalBencode() ([]byte, error) {
+	return nil, ErrJustAnError
+}
+
+// UnmarshalBencode implements Unmarshaler.UnmarshalBencode
+func (emt errorMarshalType) UnmarshalBencode([]byte) error {
+	return ErrJustAnError
 }

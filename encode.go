@@ -2,7 +2,6 @@ package bencode
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -21,10 +20,18 @@ func NewEncoder(w io.Writer) *Encoder {
 	return &Encoder{w: w}
 }
 
+// NewEncoderWithBuffer returns a new encoder that writes to w.
+func NewEncoderWithBuffer(w io.Writer, buf *bytes.Buffer) *Encoder {
+	return &Encoder{
+		w: w,
+		e: encoder{*buf},
+	}
+}
+
 // Encode writes the Bencode encoding of v to the stream.
 func (enc *Encoder) Encode(v interface{}) error {
 	enc.e.Reset()
-	if err := enc.e.Marshal(v); err != nil {
+	if err := enc.e.marshal(v); err != nil {
 		return err
 	}
 	_, err := enc.w.Write(enc.e.Bytes())
@@ -37,85 +44,112 @@ type encoder struct {
 }
 
 func (e *encoder) Marshal(v interface{}) error {
+	return e.marshal(v)
+}
+
+func (e *encoder) marshal(v interface{}) error {
 	switch v := v.(type) {
 	case Marshaler:
 		raw, err := v.MarshalBencode()
 		if err != nil {
 			return err
 		}
-		_, _ = e.Write(raw)
-		return nil
+		e.Write(raw)
 
 	case []byte:
-		return e.marshalBytes(v)
-
+		e.marshalBytes(v)
 	case string:
-		return e.marshalString(v)
+		e.marshalString(v)
 
-	case int:
-		return e.marshalInt(int64(v))
-
-	case int8:
-		return e.marshalInt(int64(v))
-
-	case int16:
-		return e.marshalInt(int64(v))
-
-	case int32:
-		return e.marshalInt(int64(v))
-
-	case int64:
-		return e.marshalInt(int64(v))
-
-	case uint:
-		return e.marshalUInt(uint64(v))
-
-	case uint8:
-		return e.marshalUInt(uint64(v))
-
-	case uint16:
-		return e.marshalUInt(uint64(v))
-
-	case uint32:
-		return e.marshalUInt(uint64(v))
-
-	case uint64:
-		return e.marshalUInt(uint64(v))
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		e.marshalIntGen(v)
 
 	case bool:
-		return e.marshalBool(v)
+		var n int64
+		if v {
+			n = 1
+		}
+		e.marshalInt(n)
 
 	case map[string]interface{}:
 		return e.marshalDictionary(v)
 
-	case []string:
-		return e.marshalStringsSlice(v)
-
 	case []interface{}:
-		return e.marshalSlice2(v)
+		return e.marshalSlice(v)
 
 	default:
-		val := reflect.ValueOf(v)
-		return e.marshal(val)
+		return e.marshalReflect(reflect.ValueOf(v))
 	}
+	return nil
 }
 
-func (e *encoder) marshal(val reflect.Value) error {
+func (e *encoder) marshalBytes(b []byte) error {
+	e.WriteString(strconv.Itoa(len(b)))
+	e.WriteByte(':')
+	e.Write(b)
+	return nil
+}
+
+func (e *encoder) marshalString(s string) error {
+	e.WriteString(strconv.Itoa(len(s)))
+	e.WriteByte(':')
+	e.WriteString(s)
+	return nil
+}
+
+func (e *encoder) marshalIntGen(val interface{}) error {
+	var num int64
+	switch val := val.(type) {
+	case int64:
+		num = int64(val)
+	case int32:
+		num = int64(val)
+	case int16:
+		num = int64(val)
+	case int8:
+		num = int64(val)
+	case int:
+		num = int64(val)
+	case uint64:
+		num = int64(val)
+	case uint32:
+		num = int64(val)
+	case uint16:
+		num = int64(val)
+	case uint8:
+		num = int64(val)
+	case uint:
+		num = int64(val)
+	default:
+		return fmt.Errorf("unknown int type %T", val)
+	}
+	e.marshalInt(num)
+	return nil
+}
+
+func (e *encoder) marshalInt(num int64) error {
+	e.WriteByte('i')
+	var b [20]byte // max_str_len( math.MaxInt64, math.MinInt64 )
+	buf := strconv.AppendInt(b[0:0], num, 10)
+	e.Write(buf)
+	e.WriteByte('e')
+	return nil
+}
+
+func (e *encoder) marshalReflect(val reflect.Value) error {
 	switch val.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return e.marshalIntRefl(val)
-
+		e.marshalIntGen(val.Int())
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return e.marshalUIntRefl(val)
+		e.marshalIntGen(val.Uint())
 
 	case reflect.String:
-		return e.marshalStringRefl(val)
+		e.marshalString(val.String())
 
 	case reflect.Slice:
-		return e.marshalSlice(val)
-
+		return e.marshalSliceReflect(val)
 	case reflect.Array:
-		return e.marshalArray(val)
+		return e.marshalArrayReflect(val)
 
 	case reflect.Map:
 		return e.marshalMap(val)
@@ -124,99 +158,26 @@ func (e *encoder) marshal(val reflect.Value) error {
 		return e.marshalStruct(val)
 
 	case reflect.Ptr:
-		return e.Marshal(val.Elem().Interface())
+		return e.marshal(val.Elem().Interface())
 
 	case reflect.Interface:
-		return e.Marshal(val.Elem().Interface())
+		return e.marshal(val.Elem().Interface())
 
 	default:
 		return fmt.Errorf("Unknown kind: %v", val.Kind())
 	}
-}
-
-func (e *encoder) marshalIntRefl(val reflect.Value) error {
-	_ = e.WriteByte('i')
-	buf := strconv.AppendInt([]byte{}, val.Int(), 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte('e')
 	return nil
 }
 
-func (e *encoder) marshalUIntRefl(val reflect.Value) error {
-	_ = e.WriteByte('i')
-	buf := strconv.AppendUint([]byte{}, val.Uint(), 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte('e')
-	return nil
-}
-
-func (e *encoder) marshalInt(val int64) error {
-	_ = e.WriteByte('i')
-	buf := strconv.AppendInt([]byte{}, val, 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte('e')
-	return nil
-}
-
-func (e *encoder) marshalUInt(val uint64) error {
-	_ = e.WriteByte('i')
-	buf := strconv.AppendUint([]byte{}, val, 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte('e')
-	return nil
-}
-
-func (e *encoder) marshalBool(val bool) error {
-	_ = e.WriteByte('i')
-	if val {
-		_ = e.WriteByte('1')
-	} else {
-		_ = e.WriteByte('0')
-	}
-	_ = e.WriteByte('e')
-	return nil
-}
-
-func (e *encoder) marshalStringRefl(val reflect.Value) error {
-	buf := strconv.AppendInt([]byte{}, int64(len(val.String())), 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte(':')
-	_, _ = e.Write([]byte(val.String()))
-	return nil
-}
-
-func (e *encoder) marshalBytes(val []byte) error {
-	buf := strconv.AppendInt([]byte{}, int64(len(val)), 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte(':')
-	_, _ = e.Write(val)
-	return nil
-}
-
-func (e *encoder) marshalString(val string) error {
-	buf := strconv.AppendInt([]byte{}, int64(len(val)), 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte(':')
-	_, _ = e.WriteString(val)
-	return nil
-}
-
-func (e *encoder) marshalSlice(val reflect.Value) error {
+func (e *encoder) marshalSliceReflect(val reflect.Value) error {
 	elemKind := val.Type().Elem().Kind()
-	if elemKind != reflect.Uint8 {
-		return e.marshalList(val)
+	if elemKind == reflect.Uint8 {
+		return e.marshalBytes(val.Bytes())
 	}
-
-	// treat slice like string
-	valBytes := val.Bytes()
-
-	_, _ = e.Write(strconv.AppendInt([]byte{}, int64(len(valBytes)), 10))
-	_ = e.WriteByte(':')
-	_, _ = e.Write(valBytes)
-	return nil
+	return e.marshalList(val)
 }
 
-func (e *encoder) marshalArray(val reflect.Value) error {
+func (e *encoder) marshalArrayReflect(val reflect.Value) error {
 	elemKind := val.Type().Elem().Kind()
 	if elemKind != reflect.Uint8 {
 		return e.marshalList(val)
@@ -234,110 +195,57 @@ func (e *encoder) marshalArray(val reflect.Value) error {
 }
 
 func (e *encoder) marshalList(val reflect.Value) error {
-	_ = e.WriteByte('l')
+	e.WriteByte('l')
 
 	for i := 0; i < val.Len(); i++ {
-		// array of interface{} values, need to extract unterling type of element
-		element := reflect.ValueOf(val.Index(i).Interface())
-		if err := e.marshal(element); err != nil {
+		if err := e.marshal(val.Index(i).Interface()); err != nil {
 			return err
 		}
 	}
-	_ = e.WriteByte('e')
+
+	e.WriteByte('e')
 	return nil
 }
 
 func (e *encoder) marshalMap(val reflect.Value) error {
-	_ = e.WriteByte('d')
-
-	keys := val.MapKeys()
-	rawKeys := make(bytesSlice, len(keys))
-
-	for i, key := range keys {
-		if key.Kind() != reflect.String {
-			return errors.New("Map can be marshaled only if keys are of type 'string'")
-		}
-		rawKeys[i] = []byte(key.String())
-	}
-	sort.Sort(rawKeys)
-
-	for _, rawKey := range rawKeys {
-		key := string(rawKey)
-		vKey := reflect.ValueOf(key)
-		if err := e.marshal(vKey); err != nil {
-			return err
-		}
-		value := val.MapIndex(vKey)
-		if err := e.marshal(value); err != nil {
-			return err
-		}
-	}
-	return e.WriteByte('e')
+	// TODO
+	return nil
 }
 
 func (e *encoder) marshalStruct(val reflect.Value) error {
-	_ = e.WriteByte('d')
-
-	valType := val.Type()
-
-	fields := positionedFieldsByName{}
-	for i := 0; i < val.NumField(); i++ {
-		fieldOpt := extractFieldOptions(val, valType.Field(i).Name)
-		if len(fieldOpt) == 0 {
-			continue
-		}
-		fields = append(fields, positionedField{[]byte(fieldOpt), i})
-	}
-
-	sort.Sort(fields)
-
-	for _, f := range fields {
-		if err := e.marshal(reflect.ValueOf(f.name)); err != nil {
-			return err
-		}
-		if err := e.marshal(val.Field(f.pos)); err != nil {
-			return err
-		}
-	}
-	_ = e.WriteByte('e')
+	// TODO
 	return nil
 }
 
-func (e *encoder) marshalDictionary(d map[string]interface{}) error {
-	_ = e.WriteByte('d')
+func (e *encoder) marshalDictionary(dict map[string]interface{}) error {
+	e.WriteByte('d')
 
-	for key, data := range d {
-		_ = e.marshalString(key)
+	keys := make([]string, 0, len(dict))
+	for key := range dict {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
 
-		if err := e.Marshal(data); err != nil {
+	for _, key := range keys {
+		e.marshalString(key)
+		if err := e.marshal(dict[key]); err != nil {
 			return err
 		}
 	}
 
-	_ = e.WriteByte('e')
+	e.WriteByte('e')
 	return nil
 }
 
-func (e *encoder) marshalSlice2(v []interface{}) error {
-	_ = e.WriteByte('l')
+func (e *encoder) marshalSlice(v []interface{}) error {
+	e.WriteByte('l')
 
 	for _, data := range v {
-		if err := e.Marshal(data); err != nil {
+		if err := e.marshal(data); err != nil {
 			return err
 		}
 	}
 
-	_ = e.WriteByte('e')
-	return nil
-}
-
-func (e *encoder) marshalStringsSlice(v []string) error {
-	_ = e.WriteByte('l')
-
-	for _, data := range v {
-		_ = e.marshalString(data)
-	}
-
-	_ = e.WriteByte('e')
+	e.WriteByte('e')
 	return nil
 }

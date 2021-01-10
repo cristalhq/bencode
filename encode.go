@@ -129,7 +129,7 @@ func (e *encoder) marshalIntGen(val interface{}) error {
 
 func (e *encoder) marshalInt(num int64) error {
 	e.WriteByte('i')
-	var b [20]byte // max_str_len( math.MaxInt64, math.MinInt64 )
+	var b [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
 	buf := strconv.AppendInt(b[0:0], num, 10)
 	e.Write(buf)
 	e.WriteByte('e')

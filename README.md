@@ -45,7 +45,7 @@ checkErr(err)
 
 ## Documentation
 
-See [these docs][doc-url].
+See [these docs][pkg-url].
 
 ## License
 

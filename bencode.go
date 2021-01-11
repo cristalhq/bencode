@@ -9,7 +9,7 @@ type Marshaler interface {
 // Marshal returns bencode encoding of v.
 func Marshal(v interface{}) ([]byte, error) {
 	var e encoder
-	if err := e.Marshal(v); err != nil {
+	if err := e.marshal(v); err != nil {
 		return nil, err
 	}
 	return e.Bytes(), nil

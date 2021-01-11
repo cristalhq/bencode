@@ -45,10 +45,6 @@ type encoder struct {
 	bytes.Buffer
 }
 
-func (e *encoder) Marshal(v interface{}) error {
-	return e.marshal(v)
-}
-
 func (e *encoder) marshal(v interface{}) error {
 	switch v := v.(type) {
 	case []byte:

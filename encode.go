@@ -2,11 +2,13 @@ package bencode
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 // An Encoder writes Bencode values to an output stream.

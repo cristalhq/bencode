@@ -227,11 +227,29 @@ func (e *encoder) marshalStruct(val reflect.Value) error {
 func (e *encoder) marshalDictionary(dict map[string]interface{}) error {
 	e.WriteByte('d')
 
-	keys := make([]string, 0, len(dict))
+	if len(dict) == 0 {
+		e.WriteByte('e')
+		return nil
+	}
+
+	keys := strslicePool.Get().([]string)
+	defer func() {
+		keys = keys[:0]
+		strslicePool.Put(keys)
+	}()
+
 	for key := range dict {
 		keys = append(keys, key)
 	}
-	sort.Strings(keys)
+	if len(keys) < 20 {
+		for i := 0; i < len(keys); i++ {
+			for j := i; j > 0 && keys[j] < keys[j-1]; j-- {
+				keys[j], keys[j-1] = keys[j-1], keys[j]
+			}
+		}
+	} else {
+		sort.Strings(keys)
+	}
 
 	for _, key := range keys {
 		e.marshalString(key)
@@ -255,4 +273,10 @@ func (e *encoder) marshalSlice(v []interface{}) error {
 
 	e.WriteByte('e')
 	return nil
+}
+
+var strslicePool = sync.Pool{
+	New: func() interface{} {
+		return make([]string, 0, 20)
+	},
 }

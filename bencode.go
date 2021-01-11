@@ -1,5 +1,9 @@
 package bencode
 
+import (
+	"bytes"
+)
+
 // Marshaler is the interface implemented by types that
 // can marshal themselves into valid Bencode.
 type Marshaler interface {
@@ -8,11 +12,21 @@ type Marshaler interface {
 
 // Marshal returns bencode encoding of v.
 func Marshal(v interface{}) ([]byte, error) {
-	var e encoder
-	if err := e.marshal(v); err != nil {
+	buf := &bytes.Buffer{}
+	if err := NewEncoder(buf).Encode(v); err != nil {
 		return nil, err
 	}
-	return e.Bytes(), nil
+	return buf.Bytes(), nil
+}
+
+// MarshalTo returns bencode encoding of v written to dst.
+func MarshalTo(dst []byte, v interface{}) ([]byte, error) {
+	buf := bytes.NewBuffer(dst)
+	enc := &Encoder{buf: buf}
+	if err := enc.marshal(v); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // Unmarshaler is the interface implemented by types

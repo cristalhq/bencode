@@ -196,7 +196,7 @@ func (e *encoder) marshalArrayReflect(val reflect.Value) error {
 
 	for i := 0; i < val.Len(); i++ {
 		v := byte(val.Index(i).Uint())
-		_ = e.WriteByte(v)
+		e.WriteByte(v)
 	}
 	return nil
 }

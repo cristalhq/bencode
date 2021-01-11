@@ -86,14 +86,18 @@ func (e *encoder) marshal(v interface{}) error {
 }
 
 func (e *encoder) marshalBytes(b []byte) error {
-	e.WriteString(strconv.Itoa(len(b)))
+	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
+	buf := strconv.AppendInt(bs[0:0], int64(len(b)), 10)
+	e.Write(buf)
 	e.WriteByte(':')
 	e.Write(b)
 	return nil
 }
 
 func (e *encoder) marshalString(s string) error {
-	e.WriteString(strconv.Itoa(len(s)))
+	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
+	buf := strconv.AppendInt(bs[0:0], int64(len(s)), 10)
+	e.Write(buf)
 	e.WriteByte(':')
 	e.WriteString(s)
 	return nil
@@ -131,8 +135,8 @@ func (e *encoder) marshalIntGen(val interface{}) error {
 
 func (e *encoder) marshalInt(num int64) error {
 	e.WriteByte('i')
-	var b [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
-	buf := strconv.AppendInt(b[0:0], num, 10)
+	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
+	buf := strconv.AppendInt(bs[0:0], num, 10)
 	e.Write(buf)
 	e.WriteByte('e')
 	return nil
@@ -185,9 +189,10 @@ func (e *encoder) marshalArrayReflect(val reflect.Value) error {
 		return e.marshalList(val)
 	}
 
-	buf := strconv.AppendInt([]byte{}, int64(val.Len()), 10)
-	_, _ = e.Write(buf)
-	_ = e.WriteByte(':')
+	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
+	buf := strconv.AppendInt(bs[0:0], int64(val.Len()), 10)
+	e.Write(buf)
+	e.WriteByte(':')
 
 	for i := 0; i < val.Len(); i++ {
 		v := byte(val.Index(i).Uint())

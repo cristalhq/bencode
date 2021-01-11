@@ -256,15 +256,8 @@ func (e *encoder) marshalDictionary(dict map[string]interface{}) error {
 	for key := range dict {
 		keys = append(keys, key)
 	}
-	if len(keys) < 20 {
-		for i := 0; i < len(keys); i++ {
-			for j := i; j > 0 && keys[j] < keys[j-1]; j-- {
-				keys[j], keys[j-1] = keys[j-1], keys[j]
-			}
-		}
-	} else {
-		sort.Strings(keys)
-	}
+
+	sortStrings(keys)
 
 	for _, key := range keys {
 		e.marshalString(key)
@@ -294,4 +287,29 @@ var strslicePool = sync.Pool{
 	New: func() interface{} {
 		return make([]string, 0, 20)
 	},
+}
+
+func sortStrings(ss []string) {
+	if len(ss) <= 20 {
+		// for j := i; j > 0 && ss[j] < ss[j-1]; j-- {
+		// 	ss[j], ss[j-1] = ss[j-1], ss[j]
+		// }
+		// below is the code above, but (almost) without bound checks
+
+		for i := 1; i < len(ss); i++ {
+			j := i
+			for {
+				a, b := ss[j], ss[j-1]
+				if j > 0 && a < b && j < len(ss) {
+					a, b = b, a
+					ss[j] = a
+					ss[j-1] = b // one bound check
+					j--
+				}
+				break
+			}
+		}
+	} else {
+		sort.Strings(ss)
+	}
 }

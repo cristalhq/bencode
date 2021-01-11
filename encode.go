@@ -169,8 +169,27 @@ func (e *encoder) marshalReflect(val reflect.Value) error {
 	case reflect.Interface:
 		return e.marshal(val.Elem().Interface())
 
+	case reflect.Bool:
+		return errors.New("reflect.Bool")
+	case reflect.Uintptr:
+		return errors.New("reflect.Uintptr")
+	case reflect.Float32:
+		return errors.New("reflect.Float32")
+	case reflect.Float64:
+		return errors.New("reflect.Float64")
+	case reflect.Complex64:
+		return errors.New("reflect.Complex64")
+	case reflect.Complex128:
+		return errors.New("reflect.Complex128")
+	case reflect.Chan:
+		return errors.New("reflect.Chan")
+	case reflect.Func:
+		return errors.New("reflect.Func")
+	case reflect.UnsafePointer:
+		return errors.New("reflect.UnsafePointer")
+
 	default:
-		return fmt.Errorf("Unknown kind: %v", val.Kind())
+		return fmt.Errorf("Unknown kind: %q", val)
 	}
 	return nil
 }

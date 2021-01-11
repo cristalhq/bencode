@@ -317,22 +317,19 @@ var strslicePool = sync.Pool{
 
 func sortStrings(ss []string) {
 	if len(ss) <= 20 {
-		// for j := i; j > 0 && ss[j] < ss[j-1]; j-- {
-		// 	ss[j], ss[j-1] = ss[j-1], ss[j]
+		// for i := 1; i < len(ss); i++ {
+		// 	for j := i; j > 0 && ss[j] < ss[j-1]; j-- {
+		// 		ss[j], ss[j-1] = ss[j-1], ss[j]
+		// 	}
 		// }
 		// below is the code above, but (almost) without bound checks
 
 		for i := 1; i < len(ss); i++ {
-			j := i
-			for {
-				a, b := ss[j], ss[j-1]
-				if j > 0 && a < b && j < len(ss) {
-					a, b = b, a
-					ss[j] = a
-					ss[j-1] = b // one bound check
-					j--
+			for j := i; j > 0; j-- {
+				if ss[j] >= ss[j-1] {
+					break
 				}
-				break
+				ss[j], ss[j-1] = ss[j-1], ss[j]
 			}
 		}
 	} else {

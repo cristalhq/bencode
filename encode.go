@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"reflect"
 	"sort"
 	"strconv"
@@ -171,10 +172,11 @@ func (e *encoder) marshalReflect(val reflect.Value) error {
 		return errors.New("reflect.Bool")
 	case reflect.Uintptr:
 		return errors.New("reflect.Uintptr")
-	case reflect.Float32:
-		return errors.New("reflect.Float32")
-	case reflect.Float64:
-		return errors.New("reflect.Float64")
+
+	case reflect.Float32, reflect.Float64:
+		f := math.Float64bits(val.Float())
+		e.marshalInt(int64(f))
+
 	case reflect.Complex64:
 		return errors.New("reflect.Complex64")
 	case reflect.Complex128:

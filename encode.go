@@ -230,7 +230,36 @@ func (e *encoder) marshalList(val reflect.Value) error {
 }
 
 func (e *encoder) marshalMap(val reflect.Value) error {
-	// TODO
+	e.WriteByte('d')
+
+	rawKeys := val.MapKeys()
+	if len(rawKeys) == 0 {
+		e.WriteByte('e')
+		return nil
+	}
+	keys := make([]string, len(rawKeys))
+
+	for i, key := range rawKeys {
+		if key.Kind() != reflect.String {
+			return errors.New("Map can be marshaled only if keys are of type 'string'")
+		}
+		keys[i] = key.String()
+	}
+
+	sortStrings(keys)
+
+	for _, key := range rawKeys {
+		key := string(key.String())
+		e.marshalString(key)
+
+		vKey := reflect.ValueOf(key)
+		value := val.MapIndex(vKey)
+		if err := e.marshalReflect(value); err != nil {
+			return err
+		}
+	}
+
+	e.WriteByte('e')
 	return nil
 }
 

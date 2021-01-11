@@ -247,12 +247,10 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 
 	sortStrings(keys)
 
-	for _, key := range rawKeys {
-		key := string(key.String())
+	for _, key := range keys {
 		e.marshalString(key)
 
-		vKey := reflect.ValueOf(key)
-		value := val.MapIndex(vKey)
+		value := val.MapIndex(reflect.ValueOf(key))
 		if err := e.marshalReflect(value); err != nil {
 			return err
 		}

@@ -49,19 +49,20 @@ func (e *encoder) Marshal(v interface{}) error {
 
 func (e *encoder) marshal(v interface{}) error {
 	switch v := v.(type) {
-	case Marshaler:
-		raw, err := v.MarshalBencode()
-		if err != nil {
-			return err
-		}
-		e.Write(raw)
-
 	case []byte:
 		e.marshalBytes(v)
 	case string:
 		e.marshalString(v)
 
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	case map[string]interface{}:
+		return e.marshalDictionary(v)
+
+	case []interface{}:
+		return e.marshalSlice(v)
+
+	case int, int8, int16, int32, int64:
+		e.marshalIntGen(v)
+	case uint, uint8, uint16, uint32, uint64:
 		e.marshalIntGen(v)
 
 	case bool:
@@ -71,11 +72,12 @@ func (e *encoder) marshal(v interface{}) error {
 		}
 		e.marshalInt(n)
 
-	case map[string]interface{}:
-		return e.marshalDictionary(v)
-
-	case []interface{}:
-		return e.marshalSlice(v)
+	case Marshaler:
+		raw, err := v.MarshalBencode()
+		if err != nil {
+			return err
+		}
+		e.Write(raw)
 
 	default:
 		return e.marshalReflect(reflect.ValueOf(v))

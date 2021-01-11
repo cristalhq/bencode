@@ -14,39 +14,36 @@ import (
 
 // An Encoder writes Bencode values to an output stream.
 type Encoder struct {
-	w io.Writer
-	e encoder
+	w   io.Writer
+	buf *bytes.Buffer
 }
 
 // NewEncoder returns a new encoder that writes to w.
 func NewEncoder(w io.Writer) *Encoder {
-	return &Encoder{w: w}
+	return NewEncoderWithBuffer(w, make([]byte, 0, 512))
 }
 
 // NewEncoderWithBuffer returns a new encoder that writes to w.
-func NewEncoderWithBuffer(w io.Writer, buf *bytes.Buffer) *Encoder {
+func NewEncoderWithBuffer(w io.Writer, buf []byte) *Encoder {
 	return &Encoder{
-		w: w,
-		e: encoder{*buf},
+		w:   w,
+		buf: bytes.NewBuffer(buf),
 	}
 }
 
 // Encode writes the Bencode encoding of v to the stream.
-func (enc *Encoder) Encode(v interface{}) error {
-	enc.e.Reset()
-	if err := enc.e.marshal(v); err != nil {
+func (e *Encoder) Encode(v interface{}) error {
+	e.buf.Reset()
+	if err := e.marshal(v); err != nil {
 		return err
 	}
-	_, err := enc.w.Write(enc.e.Bytes())
-	return err
+	if _, err := e.w.Write(e.buf.Bytes()); err != nil {
+		return err
+	}
+	return nil
 }
 
-// we can ignore every error result from bytes.Buffer 'cause it's nil
-type encoder struct {
-	bytes.Buffer
-}
-
-func (e *encoder) marshal(v interface{}) error {
+func (e *Encoder) marshal(v interface{}) error {
 	switch v := v.(type) {
 	case []byte:
 		e.marshalBytes(v)
@@ -76,7 +73,7 @@ func (e *encoder) marshal(v interface{}) error {
 		if err != nil {
 			return err
 		}
-		e.Write(raw)
+		e.buf.Write(raw)
 
 	default:
 		return e.marshalReflect(reflect.ValueOf(v))
@@ -84,27 +81,27 @@ func (e *encoder) marshal(v interface{}) error {
 	return nil
 }
 
-func (e *encoder) writeInt(n int64) {
+func (e *Encoder) writeInt(n int64) {
 	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
 	buf := strconv.AppendInt(bs[0:0], n, 10)
-	e.Write(buf)
+	e.buf.Write(buf)
 }
 
-func (e *encoder) marshalBytes(b []byte) error {
+func (e *Encoder) marshalBytes(b []byte) error {
 	e.writeInt(int64(len(b)))
-	e.WriteByte(':')
-	e.Write(b)
+	e.buf.WriteByte(':')
+	e.buf.Write(b)
 	return nil
 }
 
-func (e *encoder) marshalString(s string) error {
+func (e *Encoder) marshalString(s string) error {
 	e.writeInt(int64(len(s)))
-	e.WriteByte(':')
-	e.WriteString(s)
+	e.buf.WriteByte(':')
+	e.buf.WriteString(s)
 	return nil
 }
 
-func (e *encoder) marshalIntGen(val interface{}) error {
+func (e *Encoder) marshalIntGen(val interface{}) error {
 	var num int64
 	switch val := val.(type) {
 	case int64:
@@ -134,14 +131,14 @@ func (e *encoder) marshalIntGen(val interface{}) error {
 	return nil
 }
 
-func (e *encoder) marshalInt(num int64) error {
-	e.WriteByte('i')
+func (e *Encoder) marshalInt(num int64) error {
+	e.buf.WriteByte('i')
 	e.writeInt(num)
-	e.WriteByte('e')
+	e.buf.WriteByte('e')
 	return nil
 }
 
-func (e *encoder) marshalReflect(val reflect.Value) error {
+func (e *Encoder) marshalReflect(val reflect.Value) error {
 	switch val.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		e.marshalIntGen(val.Int())
@@ -194,7 +191,7 @@ func (e *encoder) marshalReflect(val reflect.Value) error {
 	return nil
 }
 
-func (e *encoder) marshalSliceReflect(val reflect.Value) error {
+func (e *Encoder) marshalSliceReflect(val reflect.Value) error {
 	elemKind := val.Type().Elem().Kind()
 	if elemKind == reflect.Uint8 {
 		return e.marshalBytes(val.Bytes())
@@ -202,24 +199,24 @@ func (e *encoder) marshalSliceReflect(val reflect.Value) error {
 	return e.marshalList(val)
 }
 
-func (e *encoder) marshalArrayReflect(val reflect.Value) error {
+func (e *Encoder) marshalArrayReflect(val reflect.Value) error {
 	elemKind := val.Type().Elem().Kind()
 	if elemKind != reflect.Uint8 {
 		return e.marshalList(val)
 	}
 
 	e.writeInt(int64(val.Len()))
-	e.WriteByte(':')
+	e.buf.WriteByte(':')
 
 	for i := 0; i < val.Len(); i++ {
 		v := byte(val.Index(i).Uint())
-		e.WriteByte(v)
+		e.buf.WriteByte(v)
 	}
 	return nil
 }
 
-func (e *encoder) marshalList(val reflect.Value) error {
-	e.WriteByte('l')
+func (e *Encoder) marshalList(val reflect.Value) error {
+	e.buf.WriteByte('l')
 
 	for i := 0; i < val.Len(); i++ {
 		if err := e.marshal(val.Index(i).Interface()); err != nil {
@@ -227,16 +224,16 @@ func (e *encoder) marshalList(val reflect.Value) error {
 		}
 	}
 
-	e.WriteByte('e')
+	e.buf.WriteByte('e')
 	return nil
 }
 
-func (e *encoder) marshalMap(val reflect.Value) error {
-	e.WriteByte('d')
+func (e *Encoder) marshalMap(val reflect.Value) error {
+	e.buf.WriteByte('d')
 
 	rawKeys := val.MapKeys()
 	if len(rawKeys) == 0 {
-		e.WriteByte('e')
+		e.buf.WriteByte('e')
 		return nil
 	}
 	keys := make([]string, len(rawKeys))
@@ -261,20 +258,20 @@ func (e *encoder) marshalMap(val reflect.Value) error {
 		}
 	}
 
-	e.WriteByte('e')
+	e.buf.WriteByte('e')
 	return nil
 }
 
-func (e *encoder) marshalStruct(val reflect.Value) error {
+func (e *Encoder) marshalStruct(val reflect.Value) error {
 	// TODO
 	return nil
 }
 
-func (e *encoder) marshalDictionary(dict map[string]interface{}) error {
-	e.WriteByte('d')
+func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
+	e.buf.WriteByte('d')
 
 	if len(dict) == 0 {
-		e.WriteByte('e')
+		e.buf.WriteByte('e')
 		return nil
 	}
 
@@ -297,12 +294,12 @@ func (e *encoder) marshalDictionary(dict map[string]interface{}) error {
 		}
 	}
 
-	e.WriteByte('e')
+	e.buf.WriteByte('e')
 	return nil
 }
 
-func (e *encoder) marshalSlice(v []interface{}) error {
-	e.WriteByte('l')
+func (e *Encoder) marshalSlice(v []interface{}) error {
+	e.buf.WriteByte('l')
 
 	for _, data := range v {
 		if err := e.marshal(data); err != nil {
@@ -310,7 +307,7 @@ func (e *encoder) marshalSlice(v []interface{}) error {
 		}
 	}
 
-	e.WriteByte('e')
+	e.buf.WriteByte('e')
 	return nil
 }
 

@@ -156,7 +156,10 @@ func (e *Encoder) marshalReflect(val reflect.Value) error {
 	case reflect.Struct:
 		return e.marshalStruct(val)
 
-	case reflect.Ptr:
+	case reflect.Ptr, reflect.Interface:
+		if val.IsNil() {
+			return nil
+		}
 		return e.marshal(val.Elem().Interface())
 
 	case reflect.Uintptr:
@@ -175,7 +178,6 @@ func (e *Encoder) marshalReflect(val reflect.Value) error {
 	default:
 		return fmt.Errorf("Unknown kind: %q", val)
 	}
-	return nil
 }
 
 func (e *Encoder) marshalSliceReflect(val reflect.Value) error {

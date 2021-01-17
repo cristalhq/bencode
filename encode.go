@@ -7,9 +7,7 @@ import (
 	"io"
 	"math"
 	"reflect"
-	"sort"
 	"strconv"
-	"sync"
 )
 
 // An Encoder writes Bencode values to an output stream.

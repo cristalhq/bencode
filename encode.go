@@ -61,6 +61,11 @@ func (e *Encoder) marshal(v interface{}) error {
 	case uint, uint8, uint16, uint32, uint64:
 		e.marshalIntGen(v)
 
+	case float32:
+		e.marshalInt(int64(math.Float32bits(v)))
+	case float64:
+		e.marshalInt(int64(math.Float64bits(v)))
+
 	case bool:
 		var n int64
 		if v {
@@ -162,18 +167,8 @@ func (e *Encoder) marshalReflect(val reflect.Value) error {
 	case reflect.Ptr:
 		return e.marshal(val.Elem().Interface())
 
-	case reflect.Interface:
-		return e.marshal(val.Elem().Interface())
-
-	case reflect.Bool:
-		return errors.New("reflect.Bool")
 	case reflect.Uintptr:
 		return errors.New("reflect.Uintptr")
-
-	case reflect.Float32, reflect.Float64:
-		f := math.Float64bits(val.Float())
-		e.marshalInt(int64(f))
-
 	case reflect.Complex64:
 		return errors.New("reflect.Complex64")
 	case reflect.Complex128:

@@ -145,14 +145,6 @@ func (e *Encoder) marshalInt(num int64) error {
 
 func (e *Encoder) marshalReflect(val reflect.Value) error {
 	switch val.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		e.marshalIntGen(val.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		e.marshalIntGen(val.Uint())
-
-	case reflect.String:
-		e.marshalString(val.String())
-
 	case reflect.Slice:
 		return e.marshalSliceReflect(val)
 	case reflect.Array:

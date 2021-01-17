@@ -240,7 +240,7 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 		e.marshalString(key)
 
 		value := val.MapIndex(reflect.ValueOf(key))
-		if err := e.marshalReflect(value); err != nil {
+		if err := e.marshal(value.Interface()); err != nil {
 			return err
 		}
 	}

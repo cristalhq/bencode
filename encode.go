@@ -262,11 +262,15 @@ func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
 		return nil
 	}
 
-	keys := strslicePool.Get().([]string)
-	defer func() {
-		keys = keys[:0]
-		strslicePool.Put(keys)
-	}()
+	// less than 20 keys in dict? - take from pool
+	var keys []string
+	if len(dict) <= 20 {
+		strArr := getStrArray()
+		defer putStrArray(strArr)
+		keys = strArr[:0:len(dict)]
+	} else {
+		keys = make([]string, 0, len(dict))
+	}
 
 	for key := range dict {
 		keys = append(keys, key)

@@ -297,31 +297,3 @@ func (e *Encoder) marshalSlice(v []interface{}) error {
 	e.buf.WriteByte('e')
 	return nil
 }
-
-var strslicePool = sync.Pool{
-	New: func() interface{} {
-		return make([]string, 0, 20)
-	},
-}
-
-func sortStrings(ss []string) {
-	if len(ss) <= 20 {
-		// for i := 1; i < len(ss); i++ {
-		// 	for j := i; j > 0 && ss[j] < ss[j-1]; j-- {
-		// 		ss[j], ss[j-1] = ss[j-1], ss[j]
-		// 	}
-		// }
-		// below is the code above, but (almost) without bound checks
-
-		for i := 1; i < len(ss); i++ {
-			for j := i; j > 0; j-- {
-				if ss[j] >= ss[j-1] {
-					break
-				}
-				ss[j], ss[j-1] = ss[j-1], ss[j]
-			}
-		}
-	} else {
-		sort.Strings(ss)
-	}
-}

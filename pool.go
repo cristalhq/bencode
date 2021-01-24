@@ -2,17 +2,19 @@ package bencode
 
 import "sync"
 
+const strSliceLen = 20
+
 var strslicePool = sync.Pool{
 	New: func() interface{} {
-		var j [20]string
+		var j [strSliceLen]string
 		return &j
 	},
 }
 
-func getStrArray() *[20]string {
-	return strslicePool.Get().(*[20]string)
+func getStrArray() *[strSliceLen]string {
+	return strslicePool.Get().(*[strSliceLen]string)
 }
 
-func putStrArray(ss *[20]string) {
+func putStrArray(ss *[strSliceLen]string) {
 	strslicePool.Put(ss)
 }

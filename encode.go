@@ -260,9 +260,9 @@ func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
 		return nil
 	}
 
-	// less than 20 keys in dict? - take from pool
+	// less than `strSliceLen` keys in dict? - take from pool
 	var keys []string
-	if len(dict) <= 20 {
+	if len(dict) <= strSliceLen {
 		strArr := getStrArray()
 		defer putStrArray(strArr)
 		keys = strArr[:0:len(dict)]

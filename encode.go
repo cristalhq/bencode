@@ -35,10 +35,8 @@ func (e *Encoder) Encode(v interface{}) error {
 	if err := e.marshal(v); err != nil {
 		return err
 	}
-	if _, err := e.w.Write(e.buf.Bytes()); err != nil {
-		return err
-	}
-	return nil
+	_, err := e.w.Write(e.buf.Bytes())
+	return err
 }
 
 func (e *Encoder) marshal(v interface{}) error {
@@ -160,19 +158,6 @@ func (e *Encoder) marshalReflect(val reflect.Value) error {
 		}
 		return e.marshal(val.Elem().Interface())
 
-	case reflect.Uintptr:
-		return errors.New("reflect.Uintptr")
-	case reflect.Complex64:
-		return errors.New("reflect.Complex64")
-	case reflect.Complex128:
-		return errors.New("reflect.Complex128")
-	case reflect.Chan:
-		return errors.New("reflect.Chan")
-	case reflect.Func:
-		return errors.New("reflect.Func")
-	case reflect.UnsafePointer:
-		return errors.New("reflect.UnsafePointer")
-
 	default:
 		return fmt.Errorf("Unknown kind: %q", val)
 	}
@@ -203,26 +188,28 @@ func (e *Encoder) marshalArrayReflect(val reflect.Value) error {
 }
 
 func (e *Encoder) marshalList(val reflect.Value) error {
-	e.buf.WriteByte('l')
+	if val.Len() == 0 {
+		e.buf.WriteString("le")
+		return nil
+	}
 
+	e.buf.WriteByte('l')
 	for i := 0; i < val.Len(); i++ {
 		if err := e.marshal(val.Index(i).Interface()); err != nil {
 			return err
 		}
 	}
-
 	e.buf.WriteByte('e')
 	return nil
 }
 
 func (e *Encoder) marshalMap(val reflect.Value) error {
-	e.buf.WriteByte('d')
-
 	rawKeys := val.MapKeys()
 	if len(rawKeys) == 0 {
-		e.buf.WriteByte('e')
+		e.buf.WriteString("de")
 		return nil
 	}
+
 	keys := make([]string, len(rawKeys))
 
 	for i, key := range rawKeys {
@@ -234,6 +221,7 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 
 	sortStrings(keys)
 
+	e.buf.WriteByte('d')
 	for _, key := range keys {
 		e.marshalString(key)
 
@@ -242,7 +230,6 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 			return err
 		}
 	}
-
 	e.buf.WriteByte('e')
 	return nil
 }
@@ -253,10 +240,8 @@ func (e *Encoder) marshalStruct(val reflect.Value) error {
 }
 
 func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
-	e.buf.WriteByte('d')
-
 	if len(dict) == 0 {
-		e.buf.WriteByte('e')
+		e.buf.WriteString("de")
 		return nil
 	}
 
@@ -276,26 +261,29 @@ func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
 
 	sortStrings(keys)
 
+	e.buf.WriteByte('d')
 	for _, key := range keys {
 		e.marshalString(key)
 		if err := e.marshal(dict[key]); err != nil {
 			return err
 		}
 	}
-
 	e.buf.WriteByte('e')
 	return nil
 }
 
 func (e *Encoder) marshalSlice(v []interface{}) error {
-	e.buf.WriteByte('l')
+	if len(v) == 0 {
+		e.buf.WriteString("le")
+		return nil
+	}
 
+	e.buf.WriteByte('l')
 	for _, data := range v {
 		if err := e.marshal(data); err != nil {
 			return err
 		}
 	}
-
 	e.buf.WriteByte('e')
 	return nil
 }

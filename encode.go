@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"sort"
 	"strconv"
 )
 
@@ -235,7 +236,33 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 }
 
 func (e *Encoder) marshalStruct(val reflect.Value) error {
-	// TODO
+	if val.NumField() == 0 {
+		e.buf.WriteString("de")
+		return nil
+	}
+
+	valType := val.Type()
+	keys := positionedFieldsByName{}
+
+	for i := 0; i < val.NumField(); i++ {
+		fieldOpt := extractFieldOptions(val, valType.Field(i).Name)
+		if len(fieldOpt) == 0 {
+			continue
+		}
+		keys = append(keys, positionedField{fieldOpt, i})
+	}
+	sort.Sort(keys)
+
+	e.buf.WriteByte('d')
+	for _, key := range keys {
+		e.marshalString(key.name)
+
+		value := val.Field(key.pos)
+		if err := e.marshal(value.Interface()); err != nil {
+			return err
+		}
+	}
+	e.buf.WriteByte('e')
 	return nil
 }
 

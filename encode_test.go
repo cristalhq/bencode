@@ -1,339 +1,221 @@
 package bencode
 
 import (
-	"bytes"
-	"errors"
 	"testing"
 )
 
-type encodeTestCase struct {
-	in  interface{}
-	out []byte
-	err error
-}
-
-func TestEncodeMarshaler(t *testing.T) {
-	tcs := []encodeTestCase{
-		// {
-		// 	myBoolType(true),
-		// 	[]byte(`1:y`),
-		// 	nil,
-		// },
-		// {
-		// 	myBoolType(true),
-		// 	[]byte(`1:y`),
-		// 	nil,
-		// },
-		// {
-		// 	myBoolType(false),
-		// 	[]byte(`1:n`),
-		// 	nil,
-		// },
-		// {
-		// 	myTimeType{now},
-		// 	fmt.Sprintf("i%de", now.Unix()),
-		// 	nil,
-		// },
-		{
-			errorMarshalType{},
-			[]byte(``),
-			ErrJustAnError,
-		},
-	}
-	testEncodeLoop(t, tcs)
+type marshalTestCase struct {
+	val     interface{}
+	want    string
+	wantErr bool
 }
 
 func TestMarshalInt(t *testing.T) {
-	tcs := []struct {
-		val interface{}
-		raw string
-	}{
-		{1, `i1e`},
-		{-1, `i-1e`},
-		{0, `i0e`},
-		{43210, `i43210e`},
-		{int(1), `i1e`},
-		{int8(2), `i2e`},
-		{int16(3), `i3e`},
-		{int32(4), `i4e`},
-		{int64(5), `i5e`},
-		{uint(6), `i6e`},
-		{uint8(7), `i7e`},
-		{uint16(8), `i8e`},
-		{uint32(9), `i9e`},
-		{uint64(10), `i10e`},
+	tcs := []marshalTestCase{
+		{42, `i42e`, false},
+		{-42, `i-42e`, false},
+		{0, `i0e`, false},
+		{43210, `i43210e`, false},
+		{int(1), `i1e`, false},
+		{int8(2), `i2e`, false},
+		{int16(3), `i3e`, false},
+		{int32(4), `i4e`, false},
+		{int64(5), `i5e`, false},
+		{uint(6), `i6e`, false},
+		{uint8(7), `i7e`, false},
+		{uint16(8), `i8e`, false},
+		{uint32(9), `i9e`, false},
+		{uint64(10), `i10e`, false},
 	}
-	for i, test := range tcs {
-		buf, err := Marshal(test.val)
-		if err != nil {
-			t.Fatalf("[test %d] unexpected err %v", i, err)
-		}
-
-		got := string(buf)
-		if want := string(test.raw); got != want {
-			t.Fatalf("[test %d] got %v want: %v", i, got, want)
-		}
-	}
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeBool(t *testing.T) {
-	tcs := []encodeTestCase{
-		{
-			true,
-			[]byte(`i1e`),
-			nil,
-		},
-		{
-			false,
-			[]byte(`i0e`),
-			nil,
-		},
+func TestMarshalFloat(t *testing.T) {
+	tcs := []marshalTestCase{
+		{123.456, `i4638387860618067575e`, false},
+		{-456.1234, `i-4576640212951153351e`, false},
 	}
-	testEncodeLoop(t, tcs)
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeString(t *testing.T) {
-	tcs := []encodeTestCase{
-		// {
-		// 	(*string)(nil),
-		// 	[]byte(``),
-		// 	nil,
-		// },
-		{
-			[]byte(``),
-			[]byte(`0:`),
-			nil,
-		},
-		{
-			[]byte(`x`),
-			[]byte(`1:x`),
-			nil,
-		},
-		{
-			[]byte(`foobarbaz`),
-			[]byte(`9:foobarbaz`),
-			nil,
-		},
+func TestMarshalBool(t *testing.T) {
+	tcs := []marshalTestCase{
+		{true, `i1e`, false},
+		{false, `i0e`, false},
 	}
-	testEncodeLoop(t, tcs)
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeSliceAsString(t *testing.T) {
-	tcs := []encodeTestCase{
+func TestMarshalString(t *testing.T) {
+	tcs := []marshalTestCase{
+		{"", "0:", false},
+		{[]byte(""), "0:", false},
+		{[]byte("x"), "1:x", false},
+		{[]byte("foobarbaz"), "9:foobarbaz", false},
+		{"foobarbaz", "9:foobarbaz", false},
+	}
+	testLoopMarshal(t, tcs)
+}
+
+func TestMarshalByteSliceAsString(t *testing.T) {
+	tcs := []marshalTestCase{
 		{
 			[]byte(nil),
-			[]byte{'0', ':'},
-			nil,
+			string([]byte{'0', ':'}),
+			false,
 		},
 		{
 			[]byte{},
-			[]byte{'0', ':'},
-			nil,
+			string([]byte{'0', ':'}),
+			false,
 		},
 		{
 			[]byte(`test`),
-			[]byte(`4:test`),
-			nil,
+			string([]byte(`4:test`)),
+			false,
 		},
 		{
 			[]byte{0, 1, 2, 3},
-			[]byte{'4', ':', 0, 1, 2, 3},
-			nil,
+			string([]byte{'4', ':', 0, 1, 2, 3}),
+			false,
 		},
 	}
-	testEncodeLoop(t, tcs)
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeArrayAsString(t *testing.T) {
-	tcs := []encodeTestCase{
+func TestMarshalByteArrayAsString(t *testing.T) {
+	tcs := []marshalTestCase{
+		{[...]byte{}, string([]byte(`0:`)), false},
+		{[...]byte{'x', 'y'}, string([]byte{'2', ':', 'x', 'y'}), false},
+		{[...]byte{0, 1, 2}, string([]byte{'3', ':', 0, 1, 2}), false},
+	}
+	testLoopMarshal(t, tcs)
+}
+
+func TestMarshalSlice(t *testing.T) {
+	tcs := []marshalTestCase{
+		{[]interface{}{}, `le`, false},
+		{[]interface{}{1, 2, 3}, `li1ei2ei3ee`, false},
+		{[]interface{}{"foo", "bar", "baz"}, `l3:foo3:bar3:baze`, false},
+		{[]interface{}{1, "foo", 2, "bar"}, `li1e3:fooi2e3:bare`, false},
+		{[]interface{}{1, []interface{}{"bar"}}, `li1el3:baree`, false},
+		{[]string(nil), `le`, false},
+		{[]string{}, `le`, false},
+		{[]string{"foo"}, `l3:fooe`, false},
+		{[]string{"foo", "barbaz"}, `l3:foo6:barbaze`, false},
+		{[]string{"foo", "barbaz", "go"}, `l3:foo6:barbaz2:goe`, false},
+		{(*[]interface{})(nil), ``, false},
+		{[]interface{}{"foo", 20}, `l3:fooi20ee`, false},
+		{[]interface{}{90, 20}, `li90ei20ee`, false},
+		{[]interface{}{[]interface{}{"foo", "bar"}, 20}, `ll3:foo3:barei20ee`, false},
 		{
-			[...]byte{},
-			[]byte(`0:`),
-			nil,
+			[]map[string]int{
+				{"a": 0, "b": 1},
+				{"c": 2, "d": 3},
+			},
+			`ld1:ai0e1:bi1eed1:ci2e1:di3eee`, false,
 		},
 		{
-			[...]byte{'x', 'y'},
-			[]byte(`2:xy`),
-			nil,
-		},
-		{
-			[...]byte{0, 1, 2},
-			[]byte{'3', ':', 0, 1, 2},
-			nil,
+			[][]byte{
+				[]byte{'0', '2', '4', '6', '8'},
+				[]byte{'a', 'c', 'e'},
+			},
+			`l5:024683:acee`, false,
 		},
 	}
-	testEncodeLoop(t, tcs)
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeSliceAsList(t *testing.T) {
-	tcs := []encodeTestCase{
+func TestMarshalArray(t *testing.T) {
+	tcs := []marshalTestCase{
+		{[...]interface{}{}, `le`, false},
+		{[...]interface{}{1, 2, 3}, `li1ei2ei3ee`, false},
+		{[...]interface{}{"foo", "bar", "baz"}, `l3:foo3:bar3:baze`, false},
+		{[...]interface{}{1, "foo", 2, "bar"}, `li1e3:fooi2e3:bare`, false},
+		{[...]interface{}{1, [...]interface{}{"bar"}}, `li1el3:baree`, false},
+		{[...]int{0, 1, 2}, "li0ei1ei2ee", false},
+		{[...]float32{10, 20, 30}, "li1092616192ei1101004800ei1106247680ee", false},
+	}
+	testLoopMarshal(t, tcs)
+}
+
+func TestMarshalMap(t *testing.T) {
+	tcs := []marshalTestCase{
+		{map[string]string{}, `de`, false},
+		{map[string]int{"1": 2, "4": 5}, `d1:1i2e1:4i5ee`, false},
 		{
-			[]interface{}{},
-			[]byte(`le`),
-			nil,
+			map[string]int{"1": 1, "3": 3, "123": 123},
+			"d1:1i1e3:123i123e1:3i3ee", false,
 		},
 		{
-			[]interface{}{1, 2, 3},
-			[]byte(`li1ei2ei3ee`),
-			nil,
+			map[string]string{
+				"publisher":          "bob",
+				"publisher-webpage":  "www.example.com",
+				"publisher.location": "home",
+			},
+			"d9:publisher3:bob17:publisher-webpage15:www.example.com18:publisher.location4:homee",
+			false,
 		},
 		{
-			[]interface{}{"foo", "bar", "baz"},
-			[]byte(`l3:foo3:bar3:baze`),
-			nil,
+			map[string]interface{}{"1": "one"},
+			"d1:13:onee", false,
 		},
 		{
-			[]interface{}{1, "foo", 2, "bar"},
-			[]byte(`li1e3:fooi2e3:bare`),
-			nil,
+			map[string]interface{}{"1": "one", "two": "2"},
+			"d1:13:one3:two1:2e", false,
 		},
 		{
-			[]interface{}{1, []interface{}{"bar"}},
-			[]byte(`li1el3:baree`),
-			nil,
+			map[string]interface{}{"1": func() {}},
+			"d1:13:one3:two1:2e", true,
+		},
+		{
+			map[string][]int{
+				"a": {0, 1},
+				"b": {2, 3},
+			},
+			`d1:ali0ei1ee1:bli2ei3eee`, false,
 		},
 	}
-	testEncodeLoop(t, tcs)
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeArrayAsList(t *testing.T) {
-	tcs := []encodeTestCase{
+func TestMarshalPointer(t *testing.T) {
+	b := true
+	s := "well"
+	i := 42
+
+	tcs := []marshalTestCase{
+		{&map[string]string{}, "de", false},
+		{&[]string{}, "le", false},
+		{&b, "i1e", false},
+		{&s, "4:well", false},
+		{&i, "i42e", false},
 		{
-			[...]interface{}{},
-			[]byte(`le`),
-			nil,
-		},
-		{
-			[...]interface{}{1, 2, 3},
-			[]byte(`li1ei2ei3ee`),
-			nil,
-		},
-		{
-			[...]interface{}{"foo", "bar", "baz"},
-			[]byte(`l3:foo3:bar3:baze`),
-			nil,
-		},
-		{
-			[...]interface{}{1, "foo", 2, "bar"},
-			[]byte(`li1e3:fooi2e3:bare`),
-			nil,
-		},
-		{
-			[...]interface{}{1, [...]interface{}{"bar"}},
-			[]byte(`li1el3:baree`),
-			nil,
+			&[]*[]string{
+				&[]string{},
+				&[]string{},
+			},
+			"llelee", false,
 		},
 	}
-	testEncodeLoop(t, tcs)
+	testLoopMarshal(t, tcs)
 }
 
-func TestEncodeStringsSlice(t *testing.T) {
-	tcs := []encodeTestCase{
-		{
-			[]string(nil),
-			[]byte(`le`),
-			nil,
-		},
-		{
-			[]string{},
-			[]byte(`le`),
-			nil,
-		},
-		{
-			[]string{"foo"},
-			[]byte(`l3:fooe`),
-			nil,
-		},
-		{
-			[]string{"foo", "barbaz"},
-			[]byte(`l3:foo6:barbaze`),
-			nil,
-		},
-		{
-			[]string{"foo", "barbaz", "go"},
-			[]byte(`l3:foo6:barbaz2:goe`),
-			nil,
-		},
-	}
-	testEncodeLoop(t, tcs)
-}
-
-func TestEncodePointer(t *testing.T) {
-	// b := true
-	// s := "well"
-	// i := 42
-	// tcs := []encodeTestCase{
-	// 	{
-	// 		&map[string]string{},
-	// 		[]byte{'d', 'e'},
-	// 		nil,
-	// 	},
-	// 	{
-	// 		&[]string{},
-	// 		[]byte(`le`),
-	// 		nil,
-	// 	},
-	// 	{
-	// 		&b,
-	// 		[]byte(`i1e`),
-	// 		nil,
-	// 	},
-	// 	{
-	// 		&s,
-	// 		[]byte(`4:well`),
-	// 		nil,
-	// 	},
-	// 	{
-	// 		&i,
-	// 		[]byte(`i42e`),
-	// 		nil,
-	// 	},
-	// 	{
-	// 		&[]*[]string{
-	// 			&[]string{},
-	// 			&[]string{},
-	// 		},
-	// 		[]byte(`llelee`),
-	// 		nil,
-	// 	},
-	// }
-	// testEncodeLoop(t, tcs)
-}
-
-func testEncodeLoop(t *testing.T, tcs []encodeTestCase) {
+func testLoopMarshal(t *testing.T, tcs []marshalTestCase) {
 	t.Helper()
 
 	for i, test := range tcs {
-		var b bytes.Buffer
-		err := NewEncoder(&b).Encode(test.in)
-
-		if test.err == nil && err != nil {
-			t.Fatalf("[test %d] unexpected err %v", i, err)
+		buf, err := Marshal(test.val)
+		if err != nil {
+			if test.wantErr {
+				continue
+			}
+			t.Fatalf("[test %d] unexpected err %v", i+1, err)
 		}
 
-		if test.err != nil && err == nil {
-			t.Fatalf("[test %d] expected err", i)
-		}
-
-		output := b.Bytes()
-		if bytes.Compare(test.out, output) != 0 {
-			t.Fatalf("[test %d] got %v expected: %v", i, test.out, string(output))
+		got := string(buf)
+		if want := string(test.want); got != want {
+			t.Fatalf("[test %d] got %v want: %v", i+1, got, want)
 		}
 	}
-}
-
-type myBoolType bool
-
-var ErrJustAnError = errors.New("oops")
-
-type errorMarshalType struct{}
-
-// MarshalBencode implements Marshaler.MarshalBencode
-func (emt errorMarshalType) MarshalBencode() ([]byte, error) {
-	return nil, ErrJustAnError
-}
-
-// UnmarshalBencode implements Unmarshaler.UnmarshalBencode
-func (emt errorMarshalType) UnmarshalBencode([]byte) error {
-	return ErrJustAnError
 }

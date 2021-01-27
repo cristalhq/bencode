@@ -38,8 +38,8 @@ type Unmarshaler interface {
 // Unmarshal parses the bencoded data and stores the result
 // in the value pointed to by v.
 func Unmarshal(data []byte, v interface{}) error {
-	var d decoder
-	if err := d.Unmarshal(v); err != nil {
+	d := NewDecodeBytes(data)
+	if err := d.Decode(v); err != nil {
 		return err
 	}
 	return nil

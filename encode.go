@@ -34,7 +34,7 @@ func NewEncoderWithBuffer(w io.Writer, buf []byte) *Encoder {
 func (e *Encoder) Encode(v interface{}) error {
 	e.buf.Reset()
 	if err := e.marshal(v); err != nil {
-		return err
+		return fmt.Errorf("bencode: encode failed: %w", err)
 	}
 	_, err := e.w.Write(e.buf.Bytes())
 	return err

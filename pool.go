@@ -1,6 +1,8 @@
 package bencode
 
-import "sync"
+import (
+	"sync"
+)
 
 const strSliceLen = 20
 

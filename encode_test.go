@@ -117,8 +117,8 @@ func TestMarshalSlice(t *testing.T) {
 		},
 		{
 			[][]byte{
-				[]byte{'0', '2', '4', '6', '8'},
-				[]byte{'a', 'c', 'e'},
+				{'0', '2', '4', '6', '8'},
+				{'a', 'c', 'e'},
 			},
 			`l5:024683:acee`, false,
 		},
@@ -192,8 +192,8 @@ func TestMarshalPointer(t *testing.T) {
 		{&i, "i42e", false},
 		{
 			&[]*[]string{
-				&[]string{},
-				&[]string{},
+				{},
+				{},
 			},
 			"llelee", false,
 		},

@@ -88,21 +88,19 @@ func (e *Encoder) writeInt(n int64) {
 	e.buf.Write(buf)
 }
 
-func (e *Encoder) marshalBytes(b []byte) error {
+func (e *Encoder) marshalBytes(b []byte) {
 	e.writeInt(int64(len(b)))
 	e.buf.WriteByte(':')
 	e.buf.Write(b)
-	return nil
 }
 
-func (e *Encoder) marshalString(s string) error {
+func (e *Encoder) marshalString(s string) {
 	e.writeInt(int64(len(s)))
 	e.buf.WriteByte(':')
 	e.buf.WriteString(s)
-	return nil
 }
 
-func (e *Encoder) marshalIntGen(val interface{}) error {
+func (e *Encoder) marshalIntGen(val interface{}) {
 	var num int64
 	switch val := val.(type) {
 	case int64:
@@ -125,18 +123,14 @@ func (e *Encoder) marshalIntGen(val interface{}) error {
 		num = int64(val)
 	case uint:
 		num = int64(val)
-	default:
-		return fmt.Errorf("unknown int type %T", val)
 	}
 	e.marshalInt(num)
-	return nil
 }
 
-func (e *Encoder) marshalInt(num int64) error {
+func (e *Encoder) marshalInt(num int64) {
 	e.buf.WriteByte('i')
 	e.writeInt(num)
 	e.buf.WriteByte('e')
-	return nil
 }
 
 func (e *Encoder) marshalReflect(val reflect.Value) error {
@@ -166,7 +160,8 @@ func (e *Encoder) marshalReflect(val reflect.Value) error {
 func (e *Encoder) marshalSliceReflect(val reflect.Value) error {
 	elemKind := val.Type().Elem().Kind()
 	if elemKind == reflect.Uint8 {
-		return e.marshalBytes(val.Bytes())
+		e.marshalBytes(val.Bytes())
+		return nil
 	}
 	return e.marshalList(val)
 }

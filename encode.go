@@ -89,14 +89,20 @@ func (e *Encoder) writeInt(n int64) {
 }
 
 func (e *Encoder) marshalBytes(b []byte) {
-	e.writeInt(int64(len(b)))
-	e.buf.WriteByte(':')
+	// manual inline of writeInt
+	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
+	buf := strconv.AppendInt(bs[0:0], int64(len(b)), 10)
+	buf = append(buf, ':')
+	e.buf.Write(buf)
 	e.buf.Write(b)
 }
 
 func (e *Encoder) marshalString(s string) {
-	e.writeInt(int64(len(s)))
-	e.buf.WriteByte(':')
+	// manual inline of writeInt
+	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
+	buf := strconv.AppendInt(bs[0:0], int64(len(s)), 10)
+	buf = append(buf, ':')
+	e.buf.Write(buf)
 	e.buf.WriteString(s)
 }
 

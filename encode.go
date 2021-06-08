@@ -178,12 +178,13 @@ func (e *Encoder) marshalArrayReflect(val reflect.Value) error {
 	}
 
 	e.writeInt(int64(val.Len()))
-	e.buf.WriteByte(':')
+	buf := make([]byte, 1+val.Len())
+	buf[0] = ':'
 
-	for i := 0; i < val.Len(); i++ {
-		v := byte(val.Index(i).Uint())
-		e.buf.WriteByte(v)
+	for i := 1; i <= val.Len(); i++ {
+		buf[i] = byte(val.Index(i - 1).Uint())
 	}
+	e.buf.Write(buf)
 	return nil
 }
 

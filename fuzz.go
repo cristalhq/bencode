@@ -1,6 +1,6 @@
 //go:build gofuzz
 // +build gofuzz
-//
+
 // To run the fuzzer, run the following commands:
 //		$ GO111MODULE=off go get -u github.com/dvyukov/go-fuzz/go-fuzz github.com/dvyukov/go-fuzz/go-fuzz-build
 //		$ cd $GOPATH/src/github.com/cristalhq/bencode

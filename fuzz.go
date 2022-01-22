@@ -1,3 +1,4 @@
+//go:build gofuzz
 // +build gofuzz
 //
 // To run the fuzzer, run the following commands:

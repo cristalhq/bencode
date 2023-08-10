@@ -79,5 +79,5 @@ See examples: [example_test.go](example_test.go).
 [build-url]: https://github.com/cristalhq/bencode/actions
 [pkg-img]: https://pkg.go.dev/badge/cristalhq/bencode
 [pkg-url]: https://pkg.go.dev/github.com/cristalhq/bencode
-[version-img]: https://img.shields.io/github/v/release/cristalhq/bson
-[version-url]: https://github.com/cristalhq/bson/releases
+[version-img]: https://img.shields.io/github/v/release/cristalhq/bencode
+[version-url]: https://github.com/cristalhq/bencode/releases

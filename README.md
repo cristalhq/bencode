@@ -2,8 +2,7 @@
 
 [![build-img]][build-url]
 [![pkg-img]][pkg-url]
-[![reportcard-img]][reportcard-url]
-[![coverage-img]][coverage-url]
+[![version-img]][version-url]
 
 Package implements Bencode encoding and decoding in Go.
 
@@ -13,6 +12,8 @@ Package implements Bencode encoding and decoding in Go.
 * Clean and tested code.
 * Optimized for speed.
 * Dependency-free.
+
+See [docs][pkg-url].
 
 ## Install
 
@@ -68,11 +69,7 @@ fmt.Printf("unmarshaled: %v\n", data)
 // unmarshaled: [1 42]
 ```
 
-See those examples: [example_test.go](https://github.com/cristalhq/bencode/blob/master/example_test.go).
-
-## Documentation
-
-See [these docs][pkg-url].
+See examples: [example_test.go](example_test.go).
 
 ## License
 
@@ -82,7 +79,5 @@ See [these docs][pkg-url].
 [build-url]: https://github.com/cristalhq/bencode/actions
 [pkg-img]: https://pkg.go.dev/badge/cristalhq/bencode
 [pkg-url]: https://pkg.go.dev/github.com/cristalhq/bencode
-[reportcard-img]: https://goreportcard.com/badge/cristalhq/bencode
-[reportcard-url]: https://goreportcard.com/report/cristalhq/bencode
-[coverage-img]: https://codecov.io/gh/cristalhq/bencode/branch/master/graph/badge.svg
-[coverage-url]: https://codecov.io/gh/cristalhq/bencode
+[version-img]: https://img.shields.io/github/v/release/cristalhq/bson
+[version-url]: https://github.com/cristalhq/bson/releases

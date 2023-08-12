@@ -110,7 +110,7 @@ func (e *Encoder) marshalIntGen(val interface{}) {
 	var num int64
 	switch val := val.(type) {
 	case int64:
-		num = int64(val)
+		num = val
 	case int32:
 		num = int64(val)
 	case int16:
@@ -159,7 +159,7 @@ func (e *Encoder) marshalReflect(val reflect.Value) error {
 		return e.marshal(val.Elem().Interface())
 
 	default:
-		return fmt.Errorf("Unknown kind: %q", val)
+		return fmt.Errorf("unknown kind: %q", val)
 	}
 }
 
@@ -216,7 +216,7 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 
 	for i, key := range rawKeys {
 		if key.Kind() != reflect.String {
-			return errors.New("Map can be marshaled only if keys are of type 'string'")
+			return errors.New("map can be marshaled only if keys are of type 'string'")
 		}
 		keys[i] = key.String()
 	}
@@ -236,7 +236,8 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 	return nil
 }
 
-func (e *Encoder) marshalStruct(val reflect.Value) error {
+// TODO(cristaloleg): support this.
+func (e *Encoder) marshalStruct(_ reflect.Value) error {
 	return nil
 }
 

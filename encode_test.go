@@ -214,7 +214,7 @@ func testLoopMarshal(t *testing.T, tcs []marshalTestCase) {
 		}
 
 		got := string(buf)
-		if want := string(test.want); got != want {
+		if want := test.want; got != want {
 			t.Fatalf("[test %d] got %v want: %v", i+1, got, want)
 		}
 	}

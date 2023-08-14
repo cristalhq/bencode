@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"reflect"
+	"sort"
 	"strconv"
 )
 
@@ -45,6 +46,13 @@ func (e *Encoder) marshal(v interface{}) error {
 		e.marshalBytes(v)
 	case string:
 		e.marshalString(v)
+
+	case M:
+		return e.marshalDictionary(v)
+	case D:
+		return e.marshalDictionaryNew(v)
+	case A:
+		return e.marshalSlice(v)
 
 	case map[string]interface{}:
 		return e.marshalDictionary(v)
@@ -238,6 +246,28 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 
 // TODO(cristaloleg): support this.
 func (e *Encoder) marshalStruct(_ reflect.Value) error {
+	return nil
+}
+
+func (e *Encoder) marshalDictionaryNew(dict D) error {
+	if len(dict) == 0 {
+		e.buf.WriteString("de")
+		return nil
+	}
+
+	// TODO(cristaloleg): maybe reuse sort from util.go ?
+	sort.Slice(dict, func(i, j int) bool {
+		return dict[i].K < dict[j].K
+	})
+
+	e.buf.WriteByte('d')
+	for _, pair := range dict {
+		e.marshalString(pair.K)
+		if err := e.marshal(pair.V); err != nil {
+			return err
+		}
+	}
+	e.buf.WriteByte('e')
 	return nil
 }
 

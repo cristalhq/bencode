@@ -106,7 +106,8 @@ func TestMarshalSlice(t *testing.T) {
 		{[]string{"foo", "barbaz", "go"}, `l3:foo6:barbaz2:goe`, false},
 		{(*[]interface{})(nil), ``, false},
 		{[]interface{}{"foo", 20}, `l3:fooi20ee`, false},
-		{[]interface{}{90, 20}, `li90ei20ee`, false},
+		{A{90, 20}, `li90ei20ee`, false},
+		{A{"hello", "world", 1020304050, D{{"foo", 12345}}}, "l5:hello5:worldi1020304050ed3:fooi12345eee", false},
 		{[]interface{}{[]interface{}{"foo", "bar"}, 20}, `ll3:foo3:barei20ee`, false},
 		{
 			[]map[string]int{
@@ -144,11 +145,11 @@ func TestMarshalMap(t *testing.T) {
 		{map[string]string{}, `de`, false},
 		{map[string]int{"1": 2, "4": 5}, `d1:1i2e1:4i5ee`, false},
 		{
-			map[string]int{"1": 1, "3": 3, "123": 123},
+			D{{"1", 1}, {"3", 3}, {"123", 123}},
 			"d1:1i1e3:123i123e1:3i3ee", false,
 		},
 		{
-			map[string]string{
+			M{
 				"publisher":          "bob",
 				"publisher-webpage":  "www.example.com",
 				"publisher.location": "home",
@@ -157,7 +158,7 @@ func TestMarshalMap(t *testing.T) {
 			false,
 		},
 		{
-			map[string]interface{}{"1": "one"},
+			D{{"1", "one"}},
 			"d1:13:onee", false,
 		},
 		{
@@ -165,7 +166,7 @@ func TestMarshalMap(t *testing.T) {
 			"d1:13:one3:two1:2e", false,
 		},
 		{
-			map[string]interface{}{"1": func() {}},
+			M{"1": func() {}},
 			"d1:13:one3:two1:2e", true,
 		},
 		{

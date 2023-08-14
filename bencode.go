@@ -44,3 +44,30 @@ func Unmarshal(data []byte, v interface{}) error {
 	}
 	return nil
 }
+
+// A is a Bencode array.
+//
+// Example:
+//
+//	bencode.A{"hello", "world", 3.14159, bencode.D{{"foo", 12345}}}
+type A []interface{}
+
+// D is an ordered representation of a Bencode document.
+//
+// Example usage:
+//
+//	bencode.D{{"hello", "world"}, {"foo", "bar"}, {"pi", 3.14159}}
+type D []e
+
+// e represents a Bencode element for a D. It is usually used inside a D.
+type e struct {
+	K string
+	V interface{}
+}
+
+// M is an unordered representation of a Bencode document.
+//
+// Example usage:
+//
+//	bencode.M{"hello": "world", "foo": "bar", "pi": 3.14159}
+type M map[string]interface{}

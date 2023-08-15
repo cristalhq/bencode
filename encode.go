@@ -265,7 +265,6 @@ func (e *Encoder) marshalStruct(x reflect.Value) error {
 	return nil
 }
 
-
 type dictStruct []dictPair
 
 type dictPair struct {
@@ -294,7 +293,7 @@ func walkStruct(dict dictStruct, v reflect.Value) (dictStruct, error) {
 
 		if tag == "" && strField.Anonymous &&
 			strField.Type.Kind() == reflect.Struct {
-			
+
 			var err error
 			dict, err = walkStruct(dict, field)
 			if err != nil {

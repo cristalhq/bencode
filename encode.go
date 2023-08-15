@@ -244,9 +244,67 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 	return nil
 }
 
-// TODO(cristaloleg): support this.
-func (e *Encoder) marshalStruct(_ reflect.Value) error {
+func (e *Encoder) marshalStruct(x reflect.Value) error {
+	dict := make(dictStruct, 0, x.Type().NumField())
+
+	dict, err := walkStruct(dict, x)
+	if err != nil {
+		return err
+	}
+
+	sort.Sort(dict)
+
+	e.buf.WriteByte('d')
+	for _, def := range dict {
+		e.marshalString(def.Key)
+		if err := e.marshal(def.Value.Interface()); err != nil {
+			return err
+		}
+	}
+	e.buf.WriteByte('e')
 	return nil
+}
+
+
+type dictStruct []dictPair
+
+type dictPair struct {
+	Key   string
+	Value reflect.Value
+}
+
+func (d dictStruct) Len() int           { return len(d) }
+func (d dictStruct) Less(i, j int) bool { return d[i].Key < d[j].Key }
+func (d dictStruct) Swap(i, j int)      { d[i], d[j] = d[j], d[i] }
+
+func walkStruct(dict dictStruct, v reflect.Value) (dictStruct, error) {
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		strField := t.Field(i)
+		field := v.FieldByIndex(strField.Index)
+
+		if !field.CanInterface() || isNil(field) {
+			continue
+		}
+
+		tag, ok := fieldTag(strField)
+		if !ok {
+			continue
+		}
+
+		if tag == "" && strField.Anonymous &&
+			strField.Type.Kind() == reflect.Struct {
+			
+			var err error
+			dict, err = walkStruct(dict, field)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			dict = append(dict, dictPair{Key: tag, Value: field})
+		}
+	}
+	return dict, nil
 }
 
 func (e *Encoder) marshalDictionaryNew(dict D) error {

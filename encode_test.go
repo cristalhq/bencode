@@ -180,6 +180,23 @@ func TestMarshalMap(t *testing.T) {
 	testLoopMarshal(t, tcs)
 }
 
+func TestMarshalStruct(t *testing.T) {
+	type foo struct {
+		A string `bencode:"a-field"`
+		B int    `bencode:"-"`
+		C bool   `bencode:"c-bool-field,omitempty"`
+		D map[string]int
+	}
+
+	tcs := []marshalTestCase{
+		{
+			foo{"aa", 10, true, map[string]int{"x": 42}},
+			`d1:Dd1:xi42ee7:a-field2:aa12:c-bool-fieldi1ee`, false,
+		},
+	}
+	testLoopMarshal(t, tcs)
+}
+
 func TestMarshalPointer(t *testing.T) {
 	b := true
 	s := "well"

@@ -1,7 +1,6 @@
 package bencode
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +13,7 @@ import (
 // An Encoder writes Bencode values to an output stream.
 type Encoder struct {
 	w   io.Writer
-	buf *bytes.Buffer
+	buf []byte
 }
 
 // NewEncoder returns a new encoder that writes to w.
@@ -26,17 +25,17 @@ func NewEncoder(w io.Writer) *Encoder {
 func NewEncoderWithBuffer(w io.Writer, buf []byte) *Encoder {
 	return &Encoder{
 		w:   w,
-		buf: bytes.NewBuffer(buf),
+		buf: buf,
 	}
 }
 
 // Encode writes the Bencode encoding of v to the stream.
 func (e *Encoder) Encode(v interface{}) error {
-	e.buf.Reset()
+	e.buf = e.buf[:0]
 	if err := e.marshal(v); err != nil {
 		return fmt.Errorf("bencode: encode failed: %w", err)
 	}
-	_, err := e.w.Write(e.buf.Bytes())
+	_, err := e.w.Write(e.buf)
 	return err
 }
 
@@ -82,7 +81,7 @@ func (e *Encoder) marshal(v interface{}) error {
 		if err != nil {
 			return err
 		}
-		e.buf.Write(raw)
+		e.buf = append(e.buf, raw...)
 
 	default:
 		return e.marshalReflect(reflect.ValueOf(v))
@@ -93,7 +92,7 @@ func (e *Encoder) marshal(v interface{}) error {
 func (e *Encoder) writeInt(n int64) {
 	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
 	buf := strconv.AppendInt(bs[0:0], n, 10)
-	e.buf.Write(buf)
+	e.buf = append(e.buf, buf...)
 }
 
 func (e *Encoder) marshalBytes(b []byte) {
@@ -101,8 +100,8 @@ func (e *Encoder) marshalBytes(b []byte) {
 	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
 	buf := strconv.AppendInt(bs[0:0], int64(len(b)), 10)
 	buf = append(buf, ':')
-	e.buf.Write(buf)
-	e.buf.Write(b)
+	e.buf = append(e.buf, buf...)
+	e.buf = append(e.buf, b...)
 }
 
 func (e *Encoder) marshalString(s string) {
@@ -110,8 +109,8 @@ func (e *Encoder) marshalString(s string) {
 	var bs [20]byte // max_str_len( math.MaxInt64, math.MinInt64 ) base 10
 	buf := strconv.AppendInt(bs[0:0], int64(len(s)), 10)
 	buf = append(buf, ':')
-	e.buf.Write(buf)
-	e.buf.WriteString(s)
+	e.buf = append(e.buf, buf...)
+	e.buf = append(e.buf, s...)
 }
 
 func (e *Encoder) marshalIntGen(val interface{}) {
@@ -142,9 +141,9 @@ func (e *Encoder) marshalIntGen(val interface{}) {
 }
 
 func (e *Encoder) marshalInt(num int64) {
-	e.buf.WriteByte('i')
+	e.buf = append(e.buf, 'i')
 	e.writeInt(num)
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 }
 
 func (e *Encoder) marshalReflect(val reflect.Value) error {
@@ -193,30 +192,30 @@ func (e *Encoder) marshalArrayReflect(val reflect.Value) error {
 	for i := 1; i <= val.Len(); i++ {
 		buf[i] = byte(val.Index(i - 1).Uint())
 	}
-	e.buf.Write(buf)
+	e.buf = append(e.buf, buf...)
 	return nil
 }
 
 func (e *Encoder) marshalList(val reflect.Value) error {
 	if val.Len() == 0 {
-		e.buf.WriteString("le")
+		e.buf = append(e.buf, "le"...)
 		return nil
 	}
 
-	e.buf.WriteByte('l')
+	e.buf = append(e.buf, 'l')
 	for i := 0; i < val.Len(); i++ {
 		if err := e.marshal(val.Index(i).Interface()); err != nil {
 			return err
 		}
 	}
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 	return nil
 }
 
 func (e *Encoder) marshalMap(val reflect.Value) error {
 	rawKeys := val.MapKeys()
 	if len(rawKeys) == 0 {
-		e.buf.WriteString("de")
+		e.buf = append(e.buf, "de"...)
 		return nil
 	}
 
@@ -231,7 +230,7 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 
 	sortStrings(keys)
 
-	e.buf.WriteByte('d')
+	e.buf = append(e.buf, 'd')
 	for _, key := range keys {
 		e.marshalString(key)
 
@@ -240,7 +239,7 @@ func (e *Encoder) marshalMap(val reflect.Value) error {
 			return err
 		}
 	}
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 	return nil
 }
 
@@ -254,14 +253,14 @@ func (e *Encoder) marshalStruct(x reflect.Value) error {
 
 	sort.Sort(dict)
 
-	e.buf.WriteByte('d')
+	e.buf = append(e.buf, 'd')
 	for _, def := range dict {
 		e.marshalString(def.Key)
 		if err := e.marshal(def.Value.Interface()); err != nil {
 			return err
 		}
 	}
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 	return nil
 }
 
@@ -308,7 +307,7 @@ func walkStruct(dict dictStruct, v reflect.Value) (dictStruct, error) {
 
 func (e *Encoder) marshalDictionaryNew(dict D) error {
 	if len(dict) == 0 {
-		e.buf.WriteString("de")
+		e.buf = append(e.buf, "de"...)
 		return nil
 	}
 
@@ -317,20 +316,20 @@ func (e *Encoder) marshalDictionaryNew(dict D) error {
 		return dict[i].K < dict[j].K
 	})
 
-	e.buf.WriteByte('d')
+	e.buf = append(e.buf, 'd')
 	for _, pair := range dict {
 		e.marshalString(pair.K)
 		if err := e.marshal(pair.V); err != nil {
 			return err
 		}
 	}
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 	return nil
 }
 
 func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
 	if len(dict) == 0 {
-		e.buf.WriteString("de")
+		e.buf = append(e.buf, "de"...)
 		return nil
 	}
 
@@ -350,29 +349,29 @@ func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
 
 	sortStrings(keys)
 
-	e.buf.WriteByte('d')
+	e.buf = append(e.buf, 'd')
 	for _, key := range keys {
 		e.marshalString(key)
 		if err := e.marshal(dict[key]); err != nil {
 			return err
 		}
 	}
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 	return nil
 }
 
 func (e *Encoder) marshalSlice(v []interface{}) error {
 	if len(v) == 0 {
-		e.buf.WriteString("le")
+		e.buf = append(e.buf, "le"...)
 		return nil
 	}
 
-	e.buf.WriteByte('l')
+	e.buf = append(e.buf, 'l')
 	for _, data := range v {
 		if err := e.marshal(data); err != nil {
 			return err
 		}
 	}
-	e.buf.WriteByte('e')
+	e.buf = append(e.buf, 'e')
 	return nil
 }

@@ -21,12 +21,11 @@ func Marshal(v interface{}) ([]byte, error) {
 
 // MarshalTo returns bencode encoding of v written to dst.
 func MarshalTo(dst []byte, v interface{}) ([]byte, error) {
-	buf := bytes.NewBuffer(dst)
-	enc := &Encoder{buf: buf}
+	enc := &Encoder{buf: dst}
 	if err := enc.marshal(v); err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil
+	return dst, nil
 }
 
 // Unmarshaler is the interface implemented by types

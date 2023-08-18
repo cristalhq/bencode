@@ -28,6 +28,23 @@ func ExampleMarshal() {
 	// marshaled: d1:1i42e3:fool3:bar3:baze5:hello5:worlde
 }
 
+func ExampleMarshalTo() {
+	var data interface{} = map[string]interface{}{
+		"1":     42,
+		"hello": "world",
+		"foo":   []string{"bar", "baz"},
+	}
+
+	buf := make([]byte, 0, 128)
+
+	buf, err := bencode.MarshalTo(buf, data)
+	checkErr(err)
+	fmt.Printf("marshaled: %s\n", string(buf))
+
+	// Output:
+	// marshaled: d1:1i42e3:fool3:bar3:baze5:hello5:worlde
+}
+
 func ExampleUnmarshal() {
 	var data interface{}
 

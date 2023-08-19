@@ -80,7 +80,7 @@ func isNil(v reflect.Value) bool {
 func isZero(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
-		return len(v.String()) == 0
+		return v.Len() == 0
 	case reflect.Ptr, reflect.Interface:
 		return v.IsNil()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:

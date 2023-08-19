@@ -285,7 +285,7 @@ func walkStruct(dict dictStruct, v reflect.Value) (dictStruct, error) {
 			continue
 		}
 
-		tag, ok := fieldTag(strField)
+		tag, ok := fieldTag(strField, field)
 		if !ok {
 			continue
 		}

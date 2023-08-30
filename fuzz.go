@@ -12,7 +12,7 @@
 package bencode
 
 func Fuzz(data []byte) int {
-	var dst interface{}
+	var dst any
 
 	if err := Unmarshal(data, &dst); err != nil {
 		return 0

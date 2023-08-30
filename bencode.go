@@ -11,7 +11,7 @@ type Marshaler interface {
 }
 
 // Marshal returns bencode encoding of v.
-func Marshal(v interface{}) ([]byte, error) {
+func Marshal(v any) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	if err := NewEncoder(buf).Encode(v); err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func Marshal(v interface{}) ([]byte, error) {
 }
 
 // MarshalTo returns bencode encoding of v written to dst.
-func MarshalTo(dst []byte, v interface{}) ([]byte, error) {
+func MarshalTo(dst []byte, v any) ([]byte, error) {
 	enc := &Encoder{buf: dst}
 	if err := enc.marshal(v); err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ type Unmarshaler interface {
 
 // Unmarshal parses the bencoded data and stores the result
 // in the value pointed to by v.
-func Unmarshal(data []byte, v interface{}) error {
+func Unmarshal(data []byte, v any) error {
 	d := NewDecodeBytes(data)
 	if err := d.Decode(v); err != nil {
 		return err
@@ -49,7 +49,7 @@ func Unmarshal(data []byte, v interface{}) error {
 // Example:
 //
 //	bencode.A{"hello", "world", 3.14159, bencode.D{{"foo", 12345}}}
-type A []interface{}
+type A []any
 
 // D is an ordered representation of a Bencode document.
 //
@@ -61,7 +61,7 @@ type D []e
 // e represents a Bencode element for a D. It is usually used inside a D.
 type e struct {
 	K string
-	V interface{}
+	V any
 }
 
 // M is an unordered representation of a Bencode document.
@@ -69,4 +69,4 @@ type e struct {
 // Example usage:
 //
 //	bencode.M{"hello": "world", "foo": "bar", "pi": 3.14159}
-type M map[string]interface{}
+type M map[string]any

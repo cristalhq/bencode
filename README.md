@@ -17,7 +17,7 @@ See [docs][pkg-url].
 
 ## Install
 
-Go version 1.15+
+Go version 1.18+
 
 ```
 go get github.com/cristalhq/bencode
@@ -29,7 +29,7 @@ Marshaling into Bencode
 
 ```go
 // data to process, most of the types are supported
-var data interface{} = map[string]interface{}{
+var data any = map[string]any{
     "1":     42,
     "hello": "world",
     "foo":   []string{"bar", "baz"},
@@ -51,7 +51,7 @@ checkErr(err)
 Unmarshaling from Bencode
 
 ```go
-var data interface{}
+var data any
 
 buf := []byte("li1ei42ee")
 

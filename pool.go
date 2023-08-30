@@ -7,7 +7,7 @@ import (
 const strSliceLen = 20
 
 var strslicePool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		var j [strSliceLen]string
 		return &j
 	},

@@ -9,7 +9,7 @@ import (
 
 func ExampleMarshal() {
 	// data to process, most of the types are supported
-	var data interface{} = map[string]interface{}{
+	var data any = map[string]any{
 		"1":     42,
 		"hello": "world",
 		"foo":   []string{"bar", "baz"},
@@ -29,7 +29,7 @@ func ExampleMarshal() {
 }
 
 func ExampleMarshalTo() {
-	var data interface{} = map[string]interface{}{
+	var data any = map[string]any{
 		"1":     42,
 		"hello": "world",
 		"foo":   []string{"bar", "baz"},
@@ -46,7 +46,7 @@ func ExampleMarshalTo() {
 }
 
 func ExampleUnmarshal() {
-	var data interface{}
+	var data any
 
 	buf := []byte("li1ei42ee")
 

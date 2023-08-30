@@ -5,7 +5,7 @@ import (
 )
 
 type marshalTestCase struct {
-	val     interface{}
+	val     any
 	want    string
 	wantErr bool
 }
@@ -94,21 +94,21 @@ func TestMarshalByteArrayAsString(t *testing.T) {
 
 func TestMarshalSlice(t *testing.T) {
 	tcs := []marshalTestCase{
-		{[]interface{}{}, `le`, false},
-		{[]interface{}{1, 2, 3}, `li1ei2ei3ee`, false},
-		{[]interface{}{"foo", "bar", "baz"}, `l3:foo3:bar3:baze`, false},
-		{[]interface{}{1, "foo", 2, "bar"}, `li1e3:fooi2e3:bare`, false},
-		{[]interface{}{1, []interface{}{"bar"}}, `li1el3:baree`, false},
+		{[]any{}, `le`, false},
+		{[]any{1, 2, 3}, `li1ei2ei3ee`, false},
+		{[]any{"foo", "bar", "baz"}, `l3:foo3:bar3:baze`, false},
+		{[]any{1, "foo", 2, "bar"}, `li1e3:fooi2e3:bare`, false},
+		{[]any{1, []any{"bar"}}, `li1el3:baree`, false},
 		{[]string(nil), `le`, false},
 		{[]string{}, `le`, false},
 		{[]string{"foo"}, `l3:fooe`, false},
 		{[]string{"foo", "barbaz"}, `l3:foo6:barbaze`, false},
 		{[]string{"foo", "barbaz", "go"}, `l3:foo6:barbaz2:goe`, false},
-		{(*[]interface{})(nil), ``, false},
-		{[]interface{}{"foo", 20}, `l3:fooi20ee`, false},
+		{(*[]any)(nil), ``, false},
+		{[]any{"foo", 20}, `l3:fooi20ee`, false},
 		{A{90, 20}, `li90ei20ee`, false},
 		{A{"hello", "world", 1020304050, D{{"foo", 12345}}}, "l5:hello5:worldi1020304050ed3:fooi12345eee", false},
-		{[]interface{}{[]interface{}{"foo", "bar"}, 20}, `ll3:foo3:barei20ee`, false},
+		{[]any{[]any{"foo", "bar"}, 20}, `ll3:foo3:barei20ee`, false},
 		{
 			[]map[string]int{
 				{"a": 0, "b": 1},
@@ -129,11 +129,11 @@ func TestMarshalSlice(t *testing.T) {
 
 func TestMarshalArray(t *testing.T) {
 	tcs := []marshalTestCase{
-		{[...]interface{}{}, `le`, false},
-		{[...]interface{}{1, 2, 3}, `li1ei2ei3ee`, false},
-		{[...]interface{}{"foo", "bar", "baz"}, `l3:foo3:bar3:baze`, false},
-		{[...]interface{}{1, "foo", 2, "bar"}, `li1e3:fooi2e3:bare`, false},
-		{[...]interface{}{1, [...]interface{}{"bar"}}, `li1el3:baree`, false},
+		{[...]any{}, `le`, false},
+		{[...]any{1, 2, 3}, `li1ei2ei3ee`, false},
+		{[...]any{"foo", "bar", "baz"}, `l3:foo3:bar3:baze`, false},
+		{[...]any{1, "foo", 2, "bar"}, `li1e3:fooi2e3:bare`, false},
+		{[...]any{1, [...]any{"bar"}}, `li1el3:baree`, false},
 		{[...]int{0, 1, 2}, "li0ei1ei2ee", false},
 		{[...]float32{10, 20, 30}, "li1092616192ei1101004800ei1106247680ee", false},
 	}
@@ -162,7 +162,7 @@ func TestMarshalMap(t *testing.T) {
 			"d1:13:onee", false,
 		},
 		{
-			map[string]interface{}{"1": "one", "two": "2"},
+			map[string]any{"1": "one", "two": "2"},
 			"d1:13:one3:two1:2e", false,
 		},
 		{
@@ -251,18 +251,18 @@ func testLoopMarshal(t *testing.T, tcs []marshalTestCase) {
 	}
 }
 
-var marshalBenchData = map[string]interface{}{
+var marshalBenchData = map[string]any{
 	"announce": ("udp://tracker.publicbt.com:80/announce"),
-	"announce-list": []interface{}{
-		[]interface{}{("udp://tracker.publicbt.com:80/announce")},
-		[]interface{}{[]byte("udp://tracker.openbittorrent.com:80/announce")},
-		[]interface{}{
+	"announce-list": []any{
+		[]any{("udp://tracker.publicbt.com:80/announce")},
+		[]any{[]byte("udp://tracker.openbittorrent.com:80/announce")},
+		[]any{
 			"udp://tracker.openbittorrent.com:80/announce",
 			"udp://tracker.openbittorrent.com:80/announce",
 		},
 	},
 	"comment": []byte("Debian CD from cdimage.debian.org"),
-	"info": map[string]interface{}{
+	"info": map[string]any{
 		"name":         []byte("debian-8.8.0-arm64-netinst.iso"),
 		"length":       170917888,
 		"piece length": 262144,

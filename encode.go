@@ -30,7 +30,7 @@ func NewEncoderWithBuffer(w io.Writer, buf []byte) *Encoder {
 }
 
 // Encode writes the Bencode encoding of v to the stream.
-func (e *Encoder) Encode(v interface{}) error {
+func (e *Encoder) Encode(v any) error {
 	e.buf = e.buf[:0]
 	if err := e.marshal(v); err != nil {
 		return fmt.Errorf("bencode: encode failed: %w", err)
@@ -39,7 +39,7 @@ func (e *Encoder) Encode(v interface{}) error {
 	return err
 }
 
-func (e *Encoder) marshal(v interface{}) error {
+func (e *Encoder) marshal(v any) error {
 	switch v := v.(type) {
 	case []byte:
 		e.marshalBytes(v)
@@ -53,10 +53,10 @@ func (e *Encoder) marshal(v interface{}) error {
 	case A:
 		return e.marshalSlice(v)
 
-	case map[string]interface{}:
+	case map[string]any:
 		return e.marshalDictionary(v)
 
-	case []interface{}:
+	case []any:
 		return e.marshalSlice(v)
 
 	case int, int8, int16, int32, int64:
@@ -113,7 +113,7 @@ func (e *Encoder) marshalString(s string) {
 	e.buf = append(e.buf, s...)
 }
 
-func (e *Encoder) marshalIntGen(val interface{}) {
+func (e *Encoder) marshalIntGen(val any) {
 	var num int64
 	switch val := val.(type) {
 	case int64:
@@ -327,7 +327,7 @@ func (e *Encoder) marshalDictionaryNew(dict D) error {
 	return nil
 }
 
-func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
+func (e *Encoder) marshalDictionary(dict map[string]any) error {
 	if len(dict) == 0 {
 		e.buf = append(e.buf, "de"...)
 		return nil
@@ -360,7 +360,7 @@ func (e *Encoder) marshalDictionary(dict map[string]interface{}) error {
 	return nil
 }
 
-func (e *Encoder) marshalSlice(v []interface{}) error {
+func (e *Encoder) marshalSlice(v []any) error {
 	if len(v) == 0 {
 		e.buf = append(e.buf, "le"...)
 		return nil

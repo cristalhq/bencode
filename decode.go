@@ -33,7 +33,7 @@ func NewDecodeBytes(src []byte) *Decoder {
 }
 
 // Decode writes the Bencode encoding of v to the stream.
-func (d *Decoder) Decode(v interface{}) error {
+func (d *Decoder) Decode(v any) error {
 	switch v.(type) {
 	case nil:
 		return errors.New("bencode: cannot marshal into nil")
@@ -61,20 +61,20 @@ func (d *Decoder) Decode(v interface{}) error {
 	return d.writeResult(v, got)
 }
 
-func (d *Decoder) writeResult(v, got interface{}) error {
+func (d *Decoder) writeResult(v, got any) error {
 	switch v := v.(type) {
-	case *interface{}: // catch any type
+	case *any: // catch any type
 		*v = got
 
-	case *map[string]interface{}:
-		val, ok := got.(map[string]interface{})
+	case *map[string]any:
+		val, ok := got.(map[string]any)
 		if !ok {
 			return fmt.Errorf("bencode: cannot decode %T into map", got)
 		}
 		*v = val
 
-	case *[]interface{}:
-		val, ok := got.([]interface{})
+	case *[]any:
+		val, ok := got.([]any)
 		if !ok {
 			return fmt.Errorf("bencode: cannot decode %T into list", got)
 		}
@@ -86,7 +86,7 @@ func (d *Decoder) writeResult(v, got interface{}) error {
 	return nil
 }
 
-func (d *Decoder) unmarshal() (interface{}, error) {
+func (d *Decoder) unmarshal() (any, error) {
 	switch d.data[d.cursor] {
 	case 'i':
 		return d.unmarshalInt()
@@ -115,8 +115,8 @@ func (d *Decoder) unmarshalInt() (int64, error) {
 	return integer, nil
 }
 
-func (d *Decoder) unmarshalMap() (interface{}, error) {
-	dictionary := make(map[string]interface{})
+func (d *Decoder) unmarshalMap() (any, error) {
+	dictionary := make(map[string]any)
 	d.cursor++
 	for {
 		if d.cursor == d.length {
@@ -141,8 +141,8 @@ func (d *Decoder) unmarshalMap() (interface{}, error) {
 	}
 }
 
-func (d *Decoder) unmarshalList() (interface{}, error) {
-	list := make([]interface{}, 0)
+func (d *Decoder) unmarshalList() (any, error) {
+	list := make([]any, 0)
 	d.cursor++
 	for {
 		if d.cursor == d.length {
